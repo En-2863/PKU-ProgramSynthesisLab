@@ -1,0 +1,519 @@
+{
+ "tot_score": 5,
+ "tot_time": 10622.984513282776,
+ "error": null,
+ "cases": {
+  "basic-0.sl": [
+   [
+    "correct",
+    3
+   ],
+   1,
+   0.21544623374938965
+  ],
+  "basic-three.sl": [
+   [
+    "correct",
+    5
+   ],
+   1,
+   0.5667545795440674
+  ],
+  "basic-tutorial.sl": [
+   [
+    "correct",
+    7
+   ],
+   1,
+   1.3702311515808105
+  ],
+  "basic-max2.sl": [
+   [
+    "correct",
+    6
+   ],
+   1,
+   0.5664951801300049
+  ],
+  "lia-array_search_2.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-array_search_3.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-array_search_4.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-array_search_5.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-array_search_6.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-array_search_7.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-array_search_8.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-array_search_9.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-array_search_10.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-array_search_11.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-array_search_12.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-array_search_13.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-array_search_14.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-array_search_15.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-max3.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-max4.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-max5.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-max6.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-max7.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-max8.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-max9.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-max10.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-max11.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-max12.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-max13.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-max14.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-max15.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-s1.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-s2.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "lia-s3.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-10_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-17_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-18_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-26_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-28_100.sl": [
+   [
+    "correct",
+    2
+   ],
+   1,
+   0.26558613777160645
+  ],
+  "bv-31_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-40_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-46_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-55_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-59_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-61_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-62_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-66_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-81_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-83_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-87_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-92_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-93_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-97_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-100_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-106_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-107_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-115_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-118_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-122_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-125_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-138_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-144_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-147_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ],
+  "bv-150_100.sl": [
+   [
+    "error",
+    "run_timeout"
+   ],
+   0,
+   180
+  ]
+ }
+}

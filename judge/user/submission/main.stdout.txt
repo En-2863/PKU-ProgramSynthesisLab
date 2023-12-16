@@ -1,0 +1,396 @@
+
+== 当前评测机负载: 0.2 / 8
+
+== 评测环境：
+
+$ uname -a
+Linux container 5.10.16.3-microsoft-standard-WSL2 #1 SMP Fri Apr 2 22:23:49 UTC 2021 x86_64 x86_64 x86_64 GNU/Linux
+
+$ z3 --version
+Z3 version 4.12.4 - 64 bit
+
+$ python3 -VV
+Python 3.11.6 (main, Oct  8 2023, 05:06:43) [GCC 13.2.0]
+
+$ pypy3 -VV
+/bin/sh: 1: pypy3: not found
+
+$ java -version
+/bin/sh: 1: java: not found
+
+$ node -v
+/bin/sh: 1: node: not found
+
+== 解压提交的 .zip 文件
+Archive:  submission.zip
+  inflating: submission/main.py      
+  inflating: submission/priority_queue.py  
+  inflating: submission/pyparsing.py  
+ extracting: submission/requirements.txt  
+  inflating: submission/result.txt   
+  inflating: submission/run.sh       
+  inflating: submission/sexp.py      
+  inflating: submission/translator.py  
+  inflating: submission/zip.sh       
+ - 删除了提交中的 result.txt 文件
+
+== 运行 basic 测试：[1/4] 0.sl
+(define-fun f ((x (_ BitVec 64))) (_ BitVec 64) (bvor #x0000000000000001 x))
+
+检查答案：
+adheres=true 
+exprs-total-size=3
+exprs-details=(f 3)
+sat
+
+得分：1 ('correct', 3)
+时间：0.22s
+
+== 运行 basic 测试：[2/4] three.sl
+(define-fun f ((x Int)) Int (mod (* x 3) 10))
+
+检查答案：
+adheres=true 
+exprs-total-size=5
+exprs-details=(f 5)
+sat
+
+得分：1 ('correct', 5)
+时间：0.57s
+
+== 运行 basic 测试：[3/4] tutorial.sl
+(define-fun rec ((x Int) (y Int) (z Int)) Int (* (+ x x) (- y z)))
+
+检查答案：
+adheres=true 
+exprs-total-size=7
+exprs-details=(rec 7)
+sat
+
+得分：1 ('correct', 7)
+时间：1.37s
+
+== 运行 basic 测试：[4/4] max2.sl
+(define-fun max2 ((x Int) (y Int)) Int (ite (<= y x) x y))
+
+检查答案：
+adheres=true 
+exprs-total-size=6
+exprs-details=(max2 6)
+sat
+
+得分：1 ('correct', 6)
+时间：0.57s
+
+== 运行 lia 测试：[1/30] array_search_2.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[2/30] array_search_3.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[3/30] array_search_4.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[4/30] array_search_5.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[5/30] array_search_6.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[6/30] array_search_7.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[7/30] array_search_8.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[8/30] array_search_9.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[9/30] array_search_10.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[10/30] array_search_11.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[11/30] array_search_12.sl
+Killed
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[12/30] array_search_13.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[13/30] array_search_14.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[14/30] array_search_15.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[15/30] max3.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[16/30] max4.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[17/30] max5.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[18/30] max6.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[19/30] max7.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[20/30] max8.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[21/30] max9.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[22/30] max10.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[23/30] max11.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[24/30] max12.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[25/30] max13.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[26/30] max14.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[27/30] max15.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[28/30] s1.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[29/30] s2.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 lia 测试：[30/30] s3.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[1/30] 10_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[2/30] 17_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[3/30] 18_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[4/30] 26_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[5/30] 28_100.sl
+(define-fun f ((x (_ BitVec 64))) (_ BitVec 64) (shr16 x))
+
+检查答案：
+adheres=true 
+exprs-total-size=2
+exprs-details=(f 2)
+sat
+
+得分：1 ('correct', 2)
+时间：0.27s
+
+== 运行 bv 测试：[6/30] 31_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[7/30] 40_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[8/30] 46_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[9/30] 55_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[10/30] 59_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[11/30] 61_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[12/30] 62_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[13/30] 66_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[14/30] 81_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[15/30] 83_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[16/30] 87_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[17/30] 92_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[18/30] 93_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[19/30] 97_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[20/30] 100_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[21/30] 106_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[22/30] 107_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[23/30] 115_100.sl
+Killed
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[24/30] 118_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[25/30] 122_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[26/30] 125_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[27/30] 138_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[28/30] 144_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[29/30] 147_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 运行 bv 测试：[30/30] 150_100.sl
+
+得分：0 ('error', 'run_timeout')
+时间：180.00s
+
+== 通过测试用例总数：5
+
+Done.
