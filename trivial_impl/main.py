@@ -4,7 +4,7 @@ import util.translator as translator
 from util.parsing import ParseSynFunc, StripComments
 from util.priority_queue import Priority_Queue, Select
 from util.counterexample import UpdateSearchSpace
-from util.filter import Filter
+from util.filter import global_filter
 
 
 def Extend(Stmts, Productions):
@@ -24,13 +24,13 @@ def Extend(Stmts, Productions):
     ret = []
 
     for i in range(len(Stmts)):
-        # Recursivly search the non-terminals, e.g. [* Start Start]
+        # Recursively search the non-terminals, e.g. [* Start Start]
         if type(Stmts[i]) is list:
             TryExtend = Extend(Stmts[i], Productions)
             if len(TryExtend) > 0:
                 ret.extend(Stmts[0:i] + [extended] + Stmts[i+1:]
                            for extended in TryExtend
-                           if Filter(Stmts[0:i] + [extended] + Stmts[i+1:]))
+                           if global_filter(Stmts[0:i] + [extended] + Stmts[i+1:]))
         # Terminals
         elif type(Stmts[i]) is tuple:
             continue
@@ -38,7 +38,7 @@ def Extend(Stmts, Productions):
         elif Stmts[i] in Productions:
             ret.extend(Stmts[0:i] + [extended] + Stmts[i+1:]
                        for extended in Productions[Stmts[i]]
-                       if Filter(Stmts[0:i] + [extended] + Stmts[i+1:]))
+                       if global_filter(Stmts[0:i] + [extended] + Stmts[i+1:]))
     return ret
 
 
@@ -67,8 +67,12 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
 
     BfsQueue.add_item([StartSym])
 
+    loop_count = 0
+
     # Top-down search
     while len(BfsQueue) != 0:
+        loop_count += 1
+
         Curr = Select(BfsQueue)
         TryExtend = Extend(Curr, Productions)
 
@@ -85,6 +89,7 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
 
             # No counter-example
             if counterexample is None:
+                print(f'find answer in loop {loop_count}')
                 Ans = Str
                 break
             else:
