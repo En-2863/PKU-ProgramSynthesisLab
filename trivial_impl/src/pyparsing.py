@@ -1872,7 +1872,7 @@ class QuotedString(Token):
             if isinstance(ret,basestring):
                 # replace escaped characters
                 if self.escChar:
-                    ret = re.sub(self.escCharReplacePattern,"\g<1>",ret)
+                    ret = re.sub(self.escCharReplacePattern, r"\1",ret)
 
                 # replace escaped quotes
                 if self.escQuote:

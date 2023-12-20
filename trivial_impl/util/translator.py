@@ -1,33 +1,36 @@
 from z3 import *
 
-verbose=False
+
+verbose = False
 
 
-def DeclareVar(sort,name):
-    if sort=="Int":
+def DeclareVar(sort, name):
+    if sort == "Int":
         return Int(name)
-    if sort=='Bool':
+    if sort == 'Bool':
         return Bool(name)
 
+
 def getSort(sort):
-    if sort=="Int":
+    if sort == "Int":
         return IntSort()
-    if sort=="Bool":
+    if sort == "Bool":
         return BoolSort()
-    if type(sort) == list and sort[0] == "BitVec": # sygus 1.0 format: (BitVec 64)
+    if type(sort) is list and sort[0] == "BitVec":  # sygus 1.0 format: (BitVec 64)
         return BitVecSort(sort[1][1])
-    if type(sort) == list and sort[0] == "_" and sort[1] == "BitVec": # sygus 2.0 format: (_ BitVec 64)
+    if type(sort) is list and sort[0] == "_" and sort[1] == "BitVec":  # sygus 2.0 format: (_ BitVec 64)
         return BitVecSort(sort[2][1])
     print("Error: unknown sort", sort)
     assert False
 
+
 def constToString(sort, value):
-    #print(sort, value)
+    # print(sort, value)
     if sort == "Int" or sort == "Bool":
         return str(value)
-    if type(sort) == list and sort[0] == "_":
+    if type(sort) is list and sort[0] == "_":
         sort = sort[1:]
-    if type(sort) == list and sort[0] == "BitVec":
+    if type(sort) is list and sort[0] == "BitVec":
         l = sort[1][1]
         assert l % 4 == 0
         v = hex(value)[2:]
@@ -36,32 +39,32 @@ def constToString(sort, value):
     print("Error: unknown sort", sort)
     assert False
 
-def toString(Expr,Bracket=True,ForceBracket=False):
-    if type(Expr)==str:
+
+def toString(Expr, Bracket=True, ForceBracket=False):
+    if type(Expr) is str:
         return Expr
-    if type(Expr)==tuple:
+    if type(Expr) is tuple:
         return constToString(Expr[0], Expr[1])
     if Expr[0] == "BitVec":
         return "(_ BitVec " + str(Expr[1][1]) + ")"
-    subexpr=[]
+    subexpr = []
     for expr in Expr:
-        if type(expr)==list:
+        if type(expr) is list:
             subexpr.append(toString(expr, ForceBracket=ForceBracket))
-        elif type(expr)==tuple:
+        elif type(expr) is tuple:
             subexpr.append(constToString(expr[0], expr[1]))
         else:
             subexpr.append(expr)
 
     if not Bracket:
-        #print subexpr
-        return "%s"%(' '.join(subexpr))
+        return "%s" % (' '.join(subexpr))
     # Avoid Redundant Brackets
     if ForceBracket:
-        return "(%s)"%(' '.join(subexpr))
-    if len(subexpr)==1:
-        return "%s"%(' '.join(subexpr))
+        return "(%s)" % (' '.join(subexpr))
+    if len(subexpr) == 1:
+        return "%s" % (' '.join(subexpr))
     else:
-        return "(%s)"%(' '.join(subexpr))
+        return "(%s)" % (' '.join(subexpr))
 
 
 def ReadQuery(bmExpr):
@@ -98,7 +101,6 @@ def ReadQuery(bmExpr):
     class SynFunction:
         def __init__(self, SynFunExpr):
             self.name = SynFunExpr[1]
-            # TODO: arg and ret sort
             self.argList = SynFunExpr[2]
             self.retSort = SynFunExpr[3]
             self.Sorts = []
