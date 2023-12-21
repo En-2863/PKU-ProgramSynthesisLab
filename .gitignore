@@ -1,6 +1,8 @@
 */__pycache__/
+**/__pycache__
 */result.json
 */submission.zip
 
 log.txt
 result.txt
+*.txt

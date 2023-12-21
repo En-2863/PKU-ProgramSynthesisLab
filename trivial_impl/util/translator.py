@@ -1,7 +1,7 @@
 from z3 import *
 
 
-verbose = False
+verbose = 1
 
 
 def DeclareVar(sort, name):
@@ -86,11 +86,13 @@ def ReadQuery(bmExpr):
             FunDefMap[expr[1]] = expr
             AuxFuns.append(toString(expr, ForceBracket=True))
 
-    if verbose:
+    if verbose == 1:
         print(SynFunExpr)
         print(VarDecMap)
         print(FunDefMap)
         print(Constraints)
+        print(AuxFuns)
+  
 
     VarTable = {}
     # Declare Var
@@ -134,7 +136,7 @@ def ReadQuery(bmExpr):
             spec = parse_smt2_string(spec_smt2, decls=dict(self.VarTable))
             spec = And(spec)
             self.solver.add(Not(spec))
-            if verbose:
+            if verbose == 2:
                 print("spec:", spec)
 
             res = self.solver.check()
