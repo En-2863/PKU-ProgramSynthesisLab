@@ -9,7 +9,7 @@ def commutative_and_ternary(expression) -> bool:
             A list representing a statement, e.g. [[* Start Start]]
 
     Returns:
-        True if the expression and its sub-expression satisfie all the rules above, else otherwise
+        True if the expression and its sub-expression satisfy all the rules above, else otherwise
     """
 
     def commutative_dfs(now_expr) -> (bool, int):
