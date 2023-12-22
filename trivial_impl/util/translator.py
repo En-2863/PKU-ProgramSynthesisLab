@@ -1,7 +1,8 @@
 from z3 import *
+import random
 
-
-verbose = 1
+# set it nonzero to debug
+verbose = 0
 
 
 def DeclareVar(sort, name):
@@ -86,18 +87,21 @@ def ReadQuery(bmExpr):
             FunDefMap[expr[1]] = expr
             AuxFuns.append(toString(expr, ForceBracket=True))
 
-    if verbose == 1:
-        print(SynFunExpr)
-        print(VarDecMap)
-        print(FunDefMap)
-        print(Constraints)
-        print(AuxFuns)
+    
   
 
     VarTable = {}
     # Declare Var
     for var in VarDecMap:
         VarTable[var] = DeclareVar(VarDecMap[var][2], var)
+
+    if verbose == 1:
+        print(SynFunExpr)
+        print(VarDecMap)
+        print(FunDefMap)
+        print(Constraints)
+        print(AuxFuns)
+        print(VarTable)
 
     # Declare Target Function
     class SynFunction:
@@ -126,18 +130,79 @@ def ReadQuery(bmExpr):
 
             self.solver = Solver()
 
-        def check(self, funcDefStr):
-            self.solver.push()
+            self.counterexample=[]
 
-            spec_smt2 = self.AuxFuns + [funcDefStr]
+        def addConstraint(self, model):
+            values=[]
+            numofargv=len(self.VarTable)
+            for key in self.VarTable:
+                value=model.evaluate(self.VarTable[key])
+                if not self.VarTable[key]==value:
+                    values.append(value)
+                else:
+                    values.append(random.randint(-50, 50))# use random Int to replace the unknow argument
+            funcname=model[len(model)-1]
+            func=model[funcname]
+
+            # ugly implementation...
+            if(numofargv==1):
+                values.append(model.eval(funcname(values[0])))
+            elif(numofargv==2):
+                values.append(model.eval(funcname(values[0], values[1])))
+            elif(numofargv==3):
+                values.append(model.eval(funcname(values[0], values[1], values[2])))
+            elif(numofargv==4):
+                values.append(model.eval(funcname(values[0], values[1], values[2], values[3])))
+            elif(numofargv==5):
+                values.append(model.eval(funcname(values[0], values[1], values[2], values[3], values[4])))
+
+            self.counterexample.append(values)
+
+            if verbose == 3:
+                    print("check input_output pair")
+                    print(func.else_value())
+                    print(values)
+
+            
+        def check(self, funcDefStr):
+            spec_smt2_head = self.AuxFuns + [funcDefStr]
+            spec_smt2_originConstrains=[]
+
             for constraint in Constraints:
-                spec_smt2.append('(assert %s)' % (toString(constraint[1:])))
-            spec_smt2 = '\n'.join(spec_smt2)
+                spec_smt2_originConstrains.append('(assert %s)' % (toString(constraint[1:])))
+
+            for ce in self.counterexample:
+                counterexampleConstrains=[]
+                index=0
+                for var in VarTable:
+                    counterexampleConstrains.append('(assert (= %s %s))'%(var, str(ce[index])))
+                    index+=1
+
+                self.solver.push()
+                spec_smt2 = spec_smt2_head+counterexampleConstrains+spec_smt2_originConstrains
+                spec_smt2 = '\n'.join(spec_smt2)
+                spec = parse_smt2_string(spec_smt2, decls=dict(self.VarTable))
+                spec = And(spec)
+                self.solver.add(spec)
+                res=self.solver.check()
+                self.solver.pop()
+
+                if res == unsat:
+                    return []
+                    
+
+
+            self.solver.push()
+            spec_smt2 = spec_smt2_head+spec_smt2_originConstrains
+            spec_smt2 = '\n'.join(spec_smt2)   
             spec = parse_smt2_string(spec_smt2, decls=dict(self.VarTable))
+            if verbose == 2:
+                print("spec:", spec_smt2)
+            if verbose == 3:
+                print("funcDefStr:", funcDefStr)
             spec = And(spec)
             self.solver.add(Not(spec))
-            if verbose == 2:
-                print("spec:", spec)
+            
 
             res = self.solver.check()
             if res == unsat:
@@ -145,8 +210,8 @@ def ReadQuery(bmExpr):
                 return None
             else:
                 model = self.solver.model()
+                self.addConstraint(model)
                 self.solver.pop()
-
                 return model
 
     checker = Checker(VarTable, synFunction, Constraints, AuxFuns)

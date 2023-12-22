@@ -123,7 +123,7 @@ def ProgramSynthesis(benchmarkFile):
     print(Ans)
 
 
-    with open('./outputs/'+'result_'+os.path.split(str(benchmarkFile))[-1]+'.txt', 'w') as f:
+    with open('./outputs/'+'CEGIS_result_'+os.path.split(str(benchmarkFile))[-1]+'.txt', 'w') as f:
         f.write(Ans)
         f.write("\nSynthesis time: %f\nSearch time: %f"%((EndSearch-StartSynthesis),(EndSearch-StartSearch)))
 
