@@ -1,10 +1,12 @@
-import sys,os, time
+import sys, os, time
 import src.sexp as sexp
 import util.translator as translator
+import multiprocessing
 from util.parsing import ParseSynFunc, StripComments
 from util.priority_queue import Priority_Queue, Select
 from util.counterexample import UpdateSearchSpace
 from util.filter import global_filter
+from functools import partial
 
 
 def Extend(Stmts, Productions):
@@ -62,13 +64,10 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
         Expression: Answer to the benchmark.
     """
     TE_memory = set()                              # set of searched expression
-    BfsQueue = Priority_Queue(Productions.keys())  # search queue
+    BfsQueue = Priority_Queue()                    # search queue
     Ans = None                                     # answer of the program
 
     BfsQueue.add_item([StartSym])
-    update_time = 0
-    extend_time, check_time = 0, 0
-    select_time = 0
 
     loop_count = 0
 
@@ -76,18 +75,10 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
     while len(BfsQueue) != 0:
         loop_count += 1
 
-        start_select_time = time.time()
         Curr = Select(BfsQueue)
-        end_select_time = time.time()
-        select_time += end_select_time - start_select_time
-
-        start_extend_time = time.time()
         TryExtend = Extend(Curr, Productions)
-        end_extend_time = time.time()
-        extend_time += end_extend_time - start_extend_time
 
         # Nothing to extend, check correctness
-        start_check_time = time.time()
         if len(TryExtend) == 0:
             # Use Force Bracket = True on function definition. MAGIC CODE.
             # DO NOT MODIFY THE ARGUMENT ForceBracket = True.
@@ -102,36 +93,93 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
             if counterexample is None:
                 print(f'find answer in loop {loop_count}')
                 Ans = Str
-                end_check_time = time.time()
-                check_time += end_check_time - start_check_time
                 break
             else:
                 # TODO: counterexample-guided optimization
                 UpdateSearchSpace(counterexample, BfsQueue)
-        end_check_time = time.time()
-        check_time += end_check_time - start_check_time
 
-        start_update_time = time.time()
         for TE in TryExtend:
             TE_str = str(TE)
             if TE_str not in TE_memory:
                 BfsQueue.add_item(TE)
-                TE_memory.add(TE_str)
-        end_update_time = time.time()
-        update_time += end_update_time - start_update_time
+                TE_memory.append(TE_str)
 
-    print(f"Select: {select_time}")
-    print(f"Update: {update_time}")
-    print(f"Extend: {extend_time}\nCheck: {check_time}")
+    return Ans
+
+
+def ParrallelExtend(bmExpr, FuncDefine, Type, Productions, Namespace):
+    BfsQueue = Namespace.BfsQueue
+    TE_memory = Namespace.TE_memory
+    stop_event = Namespace.stop_event
+    Checker = translator.ReadQuery(bmExpr)
+
+    while stop_event.is_set() is False:
+        Curr = Select(BfsQueue)
+        if Curr is None:
+            continue
+        TryExtend = Extend(Curr, Productions)
+
+        # Nothing to extend, check correctness
+        if len(TryExtend) == 0:
+            # Use Force Bracket = True on function definition. MAGIC CODE.
+            # DO NOT MODIFY THE ARGUMENT ForceBracket = True.
+            FuncDefineStr = translator.toString(FuncDefine, ForceBracket=True)
+
+            # Insert Program just before the last bracket ')'
+            CurrStr = translator.toString(Curr)
+            Str = FuncDefineStr[:-1] + ' ' + CurrStr + FuncDefineStr[-1]
+            counterexample = Checker.check(Str)
+
+            # No counter-example
+            if counterexample is None:
+                print(Str)
+                Namespace.result.append(Str)
+                stop_event.set()
+                return
+            else:
+                # TODO: counterexample-guided optimization
+                UpdateSearchSpace(counterexample, BfsQueue)
+
+        for TE in TryExtend:
+            TE_str = str(TE)
+            if TE_str not in TE_memory:
+                BfsQueue.add_item(TE)
+                TE_memory.append(TE_str)
+        # print(BfsQueue.queue)
+
+    return
+
+
+def ParrallelSearch(bmExpr, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
+    ParrallelExtendPartial = partial(ParrallelExtend, bmExpr,
+                                     FuncDefine, Type, Productions)
+    # TE_memory = set()                              # set of searched expression
+    BfsQueue = Priority_Queue()                    # search queue
+    Ans = None                                     # answer of the program
+    BfsQueue.add_item([StartSym])
+    manager = multiprocessing.Manager()
+    shared_namespace = manager.Namespace()
+    shared_namespace.BfsQueue = BfsQueue
+    shared_namespace.TE_memory = manager.list()
+    shared_namespace.stop_event = manager.Event()
+    shared_namespace.result = manager.list()
+
+    num_processes = 64
+
+    with multiprocessing.Pool() as pool:
+        pool.map(ParrallelExtendPartial, [shared_namespace]*num_processes)
+
+    print(shared_namespace.result)
+    Ans = shared_namespace.result[0]
     return Ans
 
 
 def ProgramSynthesis(benchmarkFile):
-    StartSynthesis = time.time()
+    # StartSynthesis = time.time()
     # Parsing file to expression list
     bm = StripComments(benchmarkFile)
     bmExpr = sexp.sexp.parseString(bm, parseAll=True).asList()[0]
-    checker = translator.ReadQuery(bmExpr)
+    # checker = translator.ReadQuery(bmExpr)
     SynFunExpr = []
 
     for expr in bmExpr:
@@ -142,15 +190,18 @@ def ProgramSynthesis(benchmarkFile):
     StartSym = 'My-Start-Symbol'                   # start symbol
     FuncDefine = ['define-fun'] + SynFunExpr[1:4]  # copy function signature
     Type, Productions = ParseSynFunc(SynFunExpr, StartSym)
+    # print(Productions)
 
-    StartSearch = time.time()
-    Ans = Search(checker, FuncDefine, Type, Productions, StartSym)
-    EndSearch = time.time()
-    print(Ans)
+    # StartSearch = time.time()
+    # Ans = Search(checker, FuncDefine, Type, Productions, StartSym)
+    Ans = ParrallelSearch(bmExpr, FuncDefine, Type, Productions, StartSym)
+    # EndSearch = time.time()
 
-    with open('result.txt', 'w') as f:
+    output_path = 'result.txt'
+    with open(output_path, 'w') as f:
         f.write(Ans)
-        # f.write("\nSynthesis time: %f\nSearch time: %f"%((EndSearch-StartSynthesis),(EndSearch-StartSearch)))
+        # f.write("\nSynthesis time: %f\nSearch time: %f" %
+        #        ((EndSearch-StartSynthesis), (EndSearch-StartSearch)))
 
 
 if __name__ == '__main__':
