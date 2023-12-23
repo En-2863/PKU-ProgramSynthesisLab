@@ -1,4 +1,4 @@
-import sys
+import sys,os, time
 import src.sexp as sexp
 import util.translator as translator
 from util.parsing import ParseSynFunc, StripComments
@@ -106,10 +106,10 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
 
 
 def ProgramSynthesis(benchmarkFile):
+    StartSynthesis=time.time()
     # Parsing file to expression list
     bm = StripComments(benchmarkFile)
     bmExpr = sexp.sexp.parseString(bm, parseAll=True).asList()[0]
-
     checker = translator.ReadQuery(bmExpr)
     SynFunExpr = []
 
@@ -122,11 +122,15 @@ def ProgramSynthesis(benchmarkFile):
     FuncDefine = ['define-fun'] + SynFunExpr[1:4]  # copy function signature
     Type, Productions = ParseSynFunc(SynFunExpr, StartSym)
 
+    StartSearch=time.time()
     Ans = Search(checker, FuncDefine, Type, Productions, StartSym)
-
+    EndSearch=time.time()
     print(Ans)
-    with open('result.txt', 'w') as f:
+
+
+    with open('./outputs/'+'CEGIS_result_'+os.path.split(str(benchmarkFile))[-1]+'.txt', 'w') as f:
         f.write(Ans)
+        f.write("\nSynthesis time: %f\nSearch time: %f"%((EndSearch-StartSynthesis),(EndSearch-StartSearch)))
 
 
 if __name__ == '__main__':
