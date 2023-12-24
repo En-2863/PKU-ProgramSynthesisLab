@@ -48,34 +48,97 @@ def context_transform(context, params):
     return context
 
 
-def get_production_prob(params, productions, statistics):
-    logging.info(f'params: \n    {params}')
-    logging.info(f'non-terminals: \n    {productions.keys()}')
+def get_transformed_context(statements, seq):
+    pass
 
+
+
+COMPENSATION_RATE = 0.01
+
+
+def get_production_prob(params, productions, statistics, start_symbol):
     non_terminals = productions.keys()
-    derivations = {}
+    derivation_symbols = {}
     possible_contexts = {}
 
     for non_terminal in non_terminals:
-        logging.info(f'non-terminal {non_terminal}:')
-        derivations[non_terminal] = set(
-            [feature_transform(symbol, params) for symbol in productions[non_terminal]])
+        derivation_symbols[non_terminal] = set(
+            [feature_transform(production, params) for production in productions[non_terminal]])
         possible_contexts[non_terminal] = []
-        logging.info(f'derivations: \n    {derivations[non_terminal]}')
+
+    possible_contexts[start_symbol].append(('{root}', '{empty}'))
 
     for non_terminal in non_terminals:
-        for symbol in productions[non_terminal]:
-
-            if type(symbol) is list:
-                if symbol[1] in non_terminals:
-                    possible_contexts[symbol[1]].append((symbol[0], '{empty}'))
-                for i in range(2, len(symbol)):
-                    if symbol[i] in non_terminals:
-                        possible_contexts[symbol[i]].append((symbol[0], feature_transform(symbol[i - 1], params)))
+        for production in productions[non_terminal]:
+            if type(production) is list:
+                if production[1] in non_terminals:
+                    possible_contexts[production[1]].append((production[0], '{empty}'))
+                for i in range(2, len(production)):
+                    if production[i] in non_terminals:
+                        possible_contexts[production[i]].append(
+                            (production[0], feature_transform(production[i - 1], params)))
 
     for non_terminal in non_terminals:
         for context in possible_contexts[non_terminal]:
             if context[1] in non_terminals:
-                possible_contexts[non_terminal] += [(context[0], derivation) for derivation in derivations[context[1]]]
+                possible_contexts[non_terminal] += \
+                    [(context[0], symbol) for symbol in derivation_symbols[context[1]]]
+        possible_contexts[non_terminal] = set(possible_contexts[non_terminal])
 
-    logging.info(f'contexts: \n    {possible_contexts}')
+    statistics_shared_count = {}
+    for non_terminal in non_terminals:
+        for context in possible_contexts[non_terminal]:
+            for production in productions[non_terminal]:
+                key = (feature_transform(production, params), context[0], context[1])
+                if key not in statistics_shared_count:
+                    statistics_shared_count[key] = 1
+                else:
+                    statistics_shared_count[key] += 1
+
+    production_with_prob = {}
+    for non_terminal in non_terminals:
+
+        production_with_prob[non_terminal] = {}
+        for context in possible_contexts[non_terminal]:
+
+            total_appears = 0
+            appears = []
+
+            assert type(productions[non_terminal]) is list
+            for production in productions[non_terminal]:
+
+                if context[1] in non_terminals:
+                    keys = set([
+                        (feature_transform(production, params), context[0], feature_transform(symbol, params))
+                        for symbol in derivation_symbols[context[1]]
+                    ])
+                else:
+                    keys = {(feature_transform(production, params), context[0], context[1])}
+
+                appears.append(0)
+
+                for key in keys:
+                    shared_count = statistics_shared_count[key]
+                    if key not in statistics.keys():
+                        appears[-1] += 0
+                    else:
+                        appears[-1] += (int(statistics[key] / shared_count))
+
+                total_appears += appears[-1]
+
+            compensation = int(total_appears * COMPENSATION_RATE)
+            compensation = max(1, compensation)
+            total_appears += compensation * len(productions[non_terminal])
+
+            prob_in_context = []
+
+            for i in range(len(productions[non_terminal])):
+                production = productions[non_terminal][i]
+                production_appears = appears[i]
+                prob_in_context.append((production, (production_appears + compensation) / total_appears))
+
+            production_with_prob[non_terminal][context] = prob_in_context
+
+    logging.info(production_with_prob['Start'])
+
+    return production_with_prob

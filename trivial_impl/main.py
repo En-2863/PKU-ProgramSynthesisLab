@@ -123,7 +123,7 @@ def ProgramSynthesis(benchmarkFile):
     if len(sys.argv) > 2:
         trainData = open(sys.argv[2])
         statistics = train(trainData)
-        get_production_prob(set([param[0] for param in SynFunExpr[2]]), Productions, statistics)
+        get_production_prob(set([param[0] for param in SynFunExpr[2]]), Productions, statistics, 'Start')
 
     StartSearch=time.time()
     Ans = Search(checker, FuncDefine, Type, Productions, StartSym)
