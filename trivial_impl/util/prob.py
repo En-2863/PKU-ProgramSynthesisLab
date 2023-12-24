@@ -1,4 +1,5 @@
 import logging
+from math import log
 
 logging.basicConfig(filemode='w', filename='porb.log', level='INFO')
 
@@ -131,4 +132,41 @@ def get_production_prob(params, productions, statistics, start_symbol):
 
             production_with_prob[non_terminal][context] = prob_in_context
 
-    return production_with_prob
+    prob_upperbounds = {}
+    for non_terminal in non_terminals:
+        prob_upperbounds[non_terminal] = 0
+
+    while True:
+        updated = False
+
+        for non_terminal in non_terminals:
+            for context in possible_contexts[non_terminal]:
+                for production, probability in production_with_prob[non_terminal][context]:
+                    next_upperbound = probability
+                    if type(production) is list:
+                        for symbol in production:
+                            next_upperbound = next_upperbound * (
+                                prob_upperbounds[symbol] if symbol in non_terminals else 1)
+                    else:
+                        next_upperbound = next_upperbound * (
+                            prob_upperbounds[production] if production in non_terminals else 1)
+
+                    if next_upperbound > prob_upperbounds[non_terminal]:
+                        prob_upperbounds[non_terminal] = next_upperbound
+                        updated = True
+        if not updated:
+            break
+
+    return production_with_prob, prob_upperbounds
+
+
+def get_statements_heuristics(statements, prob_upperbounds):
+    log_prob_sum = 0
+
+    for statement in statements:
+        if type(statement) is list:
+            log_prob_sum += get_statements_heuristics(statement, prob_upperbounds)
+        elif statement in prob_upperbounds:
+            log_prob_sum += -log(prob_upperbounds[statement], 2)
+
+    return log_prob_sum
