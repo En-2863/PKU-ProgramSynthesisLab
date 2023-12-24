@@ -1,13 +1,14 @@
-import sys,os, time
+import sys, os, time
 import src.sexp as sexp
 import util.translator as translator
 from util.parsing import ParseSynFunc, StripComments
 from util.priority_queue import Priority_Queue, Select
-from util.counterexample import UpdateSearchSpace
 from util.filter import global_filter
+# from mysolver import hasIte, getSynFunExpr, Solver
+from util.hint import Hint
 
 
-def Extend(Stmts, Productions):
+def Extend(Stmts, Productions, Types, hint):
     """
     Given a statement and replace the non-terminals
     according to rules from productions.
@@ -22,27 +23,32 @@ def Extend(Stmts, Productions):
         List(Statements): Extended statements from the origin.
     """
     ret = []
+    ret_now = []
 
     for i in range(len(Stmts)):
         # Recursively search the non-terminals, e.g. [* Start Start]
         if type(Stmts[i]) is list:
-            TryExtend = Extend(Stmts[i], Productions)
+            TryExtend, _ = Extend(Stmts[i], Productions, Types, hint)
             if len(TryExtend) > 0:
                 ret.extend(Stmts[0:i] + [extended] + Stmts[i+1:]
                            for extended in TryExtend
                            if global_filter(Stmts[0:i] + [extended] + Stmts[i+1:]))
-        # Terminals
         elif type(Stmts[i]) is tuple:
             continue
-        # Unfold the non-terminals
-        elif Stmts[i] in Productions:
-            ret.extend(Stmts[0:i] + [extended] + Stmts[i+1:]
-                       for extended in Productions[Stmts[i]]
-                       if global_filter(Stmts[0:i] + [extended] + Stmts[i+1:]))
-    return ret
+        else:
+            if Stmts[i] in Types.keys() and Types[Stmts[i]] == 'Int':
+                new_list = hint.gen_stmt_from_hint()
+                if new_list is not None and len(new_list) > 0:
+                    ret_now.append(Stmts[0:i] + new_list + Stmts[i + 1:])
+            # Unfold the non-terminals
+            if Stmts[i] in Productions:
+                ret.extend(Stmts[0:i] + [extended] + Stmts[i+1:]
+                           for extended in Productions[Stmts[i]]
+                           if global_filter(Stmts[0:i] + [extended] + Stmts[i+1:]))
+    return ret, ret_now
 
 
-def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
+def Search(Checker, FuncDefine, Type, Productions, hint, StartSym='My-Start-Symbol'):
     """Search programs that satisfies predefined functions.
         WARNING: THIS FUNCTION WILL LOOP UNTIL ANSWER IS REACHED.
 
@@ -64,6 +70,7 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
     TE_memory = set()                              # set of searched expression
     BfsQueue = Priority_Queue(Productions.keys())  # search queue
     Ans = None                                     # answer of the program
+    FuncDefineStr = translator.toString(FuncDefine, ForceBracket=True)
 
     BfsQueue.add_item([StartSym])
     update_time = 0
@@ -81,18 +88,31 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
         end_select_time = time.time()
         select_time += end_select_time - start_select_time
 
+        if loop_count % 10000 == 0:
+            print(f"{loop_count}: {Curr}")
+            print(f"Select: {select_time}")
+            print(f"Update: {update_time}")
+            print(f"Extend: {extend_time}\nCheck: {check_time}")
+            print('\n\n')
         start_extend_time = time.time()
-        TryExtend = Extend(Curr, Productions)
+        TryExtend, TryNow = Extend(Curr, Productions, Type, hint)
         end_extend_time = time.time()
         extend_time += end_extend_time - start_extend_time
+
+        for check_stmt in TryNow:
+            CurrStr = translator.toString(check_stmt)
+            Str = FuncDefineStr[:-1] + ' ' + CurrStr + FuncDefineStr[-1]
+            counterexample = Checker.check(Str)
+            if counterexample is None:  # No counter-example
+                print(f'find answer in loop {loop_count}')
+                Ans = Str
+                break
+        if Ans is not None:
+            break
 
         # Nothing to extend, check correctness
         start_check_time = time.time()
         if len(TryExtend) == 0:
-            # Use Force Bracket = True on function definition. MAGIC CODE.
-            # DO NOT MODIFY THE ARGUMENT ForceBracket = True.
-            FuncDefineStr = translator.toString(FuncDefine, ForceBracket=True)
-
             # Insert Program just before the last bracket ')'
             CurrStr = translator.toString(Curr)
             Str = FuncDefineStr[:-1] + ' ' + CurrStr + FuncDefineStr[-1]
@@ -105,9 +125,6 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
                 end_check_time = time.time()
                 check_time += end_check_time - start_check_time
                 break
-            else:
-                # TODO: counterexample-guided optimization
-                UpdateSearchSpace(counterexample, BfsQueue)
         end_check_time = time.time()
         check_time += end_check_time - start_check_time
 
@@ -131,7 +148,7 @@ def ProgramSynthesis(benchmarkFile):
     # Parsing file to expression list
     bm = StripComments(benchmarkFile)
     bmExpr = sexp.sexp.parseString(bm, parseAll=True).asList()[0]
-    checker = translator.ReadQuery(bmExpr)
+    checker, hint = translator.ReadQuery(bmExpr)
     SynFunExpr = []
 
     for expr in bmExpr:
@@ -141,10 +158,10 @@ def ProgramSynthesis(benchmarkFile):
 
     StartSym = 'My-Start-Symbol'                   # start symbol
     FuncDefine = ['define-fun'] + SynFunExpr[1:4]  # copy function signature
-    Type, Productions = ParseSynFunc(SynFunExpr, StartSym)
+    Type, Productions, isIte = ParseSynFunc(SynFunExpr, StartSym)
 
     StartSearch = time.time()
-    Ans = Search(checker, FuncDefine, Type, Productions, StartSym)
+    Ans = Search(checker, FuncDefine, Type, Productions, hint, StartSym)
     EndSearch = time.time()
     print(Ans)
 

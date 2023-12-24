@@ -14,6 +14,33 @@ def StripComments(bmFile):
     return noComments + '\n)'
 
 
+def SortProuctions(Nonterm):
+    NewNonTerm = []
+    iteTerm = []
+    operTerm = []
+    hasIte = False
+    for term in Nonterm:
+        if type(term) is list:
+            if term[0] == 'ite' or term[0] == 'if0':
+                if term[0] == 'ite':
+                    hasIte = True
+                iteTerm.append(term)
+            # elif term[0] == '>=' and '<' not in operTerm:
+            #     operTerm.append(term)
+            # elif term[0] == '<=' and '>' not in operTerm:
+            #     operTerm.append(term)
+            # elif term[0] == '<' and '>=' not in operTerm:
+            #     operTerm.append(term)
+            # elif term[0] == '>' and '<=' not in operTerm:
+            #     operTerm.append(term)
+            else:
+                operTerm.append(term)
+        else:
+            NewNonTerm.append(term)
+    NewNonTerm.extend(iteTerm)
+    NewNonTerm.extend(operTerm)
+    return Nonterm, hasIte
+
 def ParseSynFunc(SynFunExpr, StartSym='My-Start-Symbol'):
     """Parse synfunc and get the return type of symbols and production rules.
 
@@ -30,6 +57,7 @@ def ParseSynFunc(SynFunExpr, StartSym='My-Start-Symbol'):
     """
     Productions = {StartSym: []}                    # rules for extending
     Type = {StartSym: SynFunExpr[3]}                # symbol's return type
+    Ite = False
 
     # SynFunExpr[4] is the production rules
     # NonTerm: (Start, Int, (x, y, 0...)) / (StartBool, Bool, (and, or...))
@@ -41,6 +69,9 @@ def ParseSynFunc(SynFunExpr, StartSym='My-Start-Symbol'):
             Productions[StartSym].append(NTName)
 
         Type[NTName] = NTType
-        Productions[NTName] = NonTerm[2]
+        Productions[NTName], hasIte = SortProuctions(NonTerm[2])
 
-    return Type, Productions
+        if hasIte is True:
+            Ite = True
+
+    return Type, Productions, Ite

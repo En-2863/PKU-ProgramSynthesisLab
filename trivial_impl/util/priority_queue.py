@@ -7,7 +7,8 @@ def list_count(x, layer, nonterminal):
     for item in x:
         if type(item) is list:
             ret += list_count(item, layer+1, nonterminal)
-            ret += (layer**2)
+            if item[0] != 'ite':
+                ret += (layer**2)
         else:
             ret += 1 if item not in nonterminal else 100*layer
     return ret

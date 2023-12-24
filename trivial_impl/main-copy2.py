@@ -107,60 +107,58 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
     return Ans
 
 
-def ParrallelExtend(bmExpr, FuncDefine, Type, Productions, Namespace):
-    BfsQueue = Namespace.BfsQueue
+def ParrallelExtend(bmExpr, FuncDefine, Type, Productions, StartSym, Namespace):
+    #BfsQueue = Priority_Queue(Productions.keys())
+    #BfsQueue.add_item([StartSym])
     TE_memory = Namespace.TE_memory
+    BfsQueue = Namespace.BfsQueue
     stop_event = Namespace.stop_event
     Checker = translator.ReadQuery(bmExpr)
+    iteration = 0
 
     while stop_event.is_set() is False:
         Curr = Select(BfsQueue)
+        iteration += 1
+        if iteration % 10 == 0:
+            print(f"{iteration}: {Curr}")
         if Curr is None:
             continue
         TryExtend = Extend(Curr, Productions)
 
         # Nothing to extend, check correctness
         if len(TryExtend) == 0:
-            # Use Force Bracket = True on function definition. MAGIC CODE.
-            # DO NOT MODIFY THE ARGUMENT ForceBracket = True.
             FuncDefineStr = translator.toString(FuncDefine, ForceBracket=True)
-
-            # Insert Program just before the last bracket ')'
             CurrStr = translator.toString(Curr)
             Str = FuncDefineStr[:-1] + ' ' + CurrStr + FuncDefineStr[-1]
             counterexample = Checker.check(Str)
 
             # No counter-example
             if counterexample is None:
-                print(Str)
                 Namespace.result.append(Str)
                 stop_event.set()
                 return
-            else:
-                # TODO: counterexample-guided optimization
-                UpdateSearchSpace(counterexample, BfsQueue)
 
         for TE in TryExtend:
             TE_str = str(TE)
             if TE_str not in TE_memory:
                 BfsQueue.add_item(TE)
                 TE_memory.append(TE_str)
-        # print(BfsQueue.queue)
 
     return
 
 
 def ParrallelSearch(bmExpr, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
     ParrallelExtendPartial = partial(ParrallelExtend, bmExpr,
-                                     FuncDefine, Type, Productions)
+                                     FuncDefine, Type, Productions, StartSym)
     # TE_memory = set()                              # set of searched expression
-    BfsQueue = Priority_Queue()                    # search queue
+    BfsQueue = Priority_Queue(Productions.keys())                    # search queue
     Ans = None                                     # answer of the program
     BfsQueue.add_item([StartSym])
     manager = multiprocessing.Manager()
+    manager.
     shared_namespace = manager.Namespace()
-    shared_namespace.BfsQueue = BfsQueue
     shared_namespace.TE_memory = manager.list()
+    shared_namespace.BfsQueue = BfsQueue
     shared_namespace.stop_event = manager.Event()
     shared_namespace.result = manager.list()
 
@@ -189,7 +187,7 @@ def ProgramSynthesis(benchmarkFile):
 
     StartSym = 'My-Start-Symbol'                   # start symbol
     FuncDefine = ['define-fun'] + SynFunExpr[1:4]  # copy function signature
-    Type, Productions = ParseSynFunc(SynFunExpr, StartSym)
+    Type, Productions, _ = ParseSynFunc(SynFunExpr, StartSym)
     # print(Productions)
 
     # StartSearch = time.time()

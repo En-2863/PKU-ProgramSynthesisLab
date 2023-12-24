@@ -1,6 +1,5 @@
 from z3 import *
-import random
-# set_param('parallel.enable', True)
+from .hint import Hint
 
 # set it nonzero to debug
 verbose = 0
@@ -69,17 +68,54 @@ def toString(Expr, Bracket=True, ForceBracket=False):
         return "(%s)" % (' '.join(subexpr))
 
 
+def is_const(signal):
+    if type(signal) is not tuple or len(signal) != 2:
+        return False
+    if type(signal[0]) is list and (signal[0][0] == 'BitVec'):
+        if type(signal[1]) is int:
+            return True
+    elif signal[0] == 'Int' and type(signal[1]) is int:
+        return True
+    return False
+
+
+def check_operand(constraint, funcname, argnum):
+    if len(constraint) != 3:
+        return False
+    operator = constraint[0]
+    operand_l = constraint[1]
+    operand_r = constraint[2]
+    if operator != '=':
+        return False
+    if len(operand_l) != argnum + 1 or operand_l[0] != funcname:
+        return False
+    for i in range(argnum):
+        if is_const(operand_l[i + 1]) is False:
+            return False
+    if type(operand_r) is not tuple or is_const(operand_r) is False:
+        return False
+
+    return True
+
+
 def ReadQuery(bmExpr):
     SynFunExpr = []
     VarDecMap = {}
     Constraints = []
     FunDefMap = {}
     AuxFuns = []
+    FuncCallList = []
+    Logic = None
     for expr in bmExpr:
         if len(expr) == 0:
             continue
+        elif expr[0] == 'set-logic':
+            Logic = expr[1]
         elif expr[0] == 'synth-fun':
             SynFunExpr = expr
+            FuncCallList.append(SynFunExpr[1])
+            for s in SynFunExpr[2]:
+                FuncCallList.append(s[0])
         elif expr[0] == 'declare-var':
             VarDecMap[expr[1]] = expr
         elif expr[0] == 'constraint':
@@ -90,8 +126,20 @@ def ReadQuery(bmExpr):
 
     VarTable = {}
     # Declare Var
+
+    Table = {}
+    ReverseTabel = {}
+    for v, var in zip(FuncCallList[1:], VarDecMap):
+        Table[var] = v
+        ReverseTabel[v] = var
+
     for var in VarDecMap:
-        VarTable[var] = DeclareVar(VarDecMap[var][2], var)
+        VarTable[Table[var]] = DeclareVar(VarDecMap[var][2], var)
+
+    hinted_constraints = Constraints.copy()
+    hint_clc = Hint(Table)
+    hint_clc.build_parent_list(hinted_constraints)
+    hint_clc.build_hint_from_constraints(hinted_constraints, FuncCallList)
 
     if verbose == 1:
         print(SynFunExpr)
@@ -124,6 +172,16 @@ def ReadQuery(bmExpr):
             self.solver = Solver()
             self.origincounter = []
             self.counterexample = []
+            self.funcname = synFunction.name
+            self.argnum = len(synFunction.argList)
+
+            for constraints in self.Constraints:
+                if len(constraints) < 2:
+                    continue
+                if len(constraints[1]) == 3 and \
+                    check_operand(constraints[1], self.funcname, self.argnum):
+                        self.origincounter.append('(assert %s)'
+                                            % (toString(constraints[1:])))
 
         def addConstraint(self, model, fundefine):
             values = []
@@ -147,7 +205,16 @@ def ReadQuery(bmExpr):
             if len(values) == 2 and values[0] == 0 and values[1] == 0:
                 return
 
-            self.counterexample.append(values)
+            Args = []
+            counterexampleConstrains = []
+            for var, Var in zip(self.VarTable, values):
+                Args.append(str(Var))
+            counterexampleConstrains.append('(assert (= ret (%s %s)))'
+                                            % (self.synFunction.name, ' '.join(Args)))
+            counterexampleConstrains.append('(assert (= %s %s))'
+                                            % ('ret', str(values[-1])))
+            self.counterexample.append(counterexampleConstrains)
+            # print(len(self.counterexample))
             # print(f"counter: {len(self.counterexample)}")
 
             if verbose == 3:
@@ -159,27 +226,29 @@ def ReadQuery(bmExpr):
             spec_smt2_head = self.AuxFuns + [funcDefStr]
             spec_smt2_originConstrains = []
 
+            for constraint in self.origincounter:
+                # print(constraint)
+                self.solver.push()
+                spec_smt2 = spec_smt2_head + [constraint]
+                spec_smt2 = '\n'.join(spec_smt2)
+                spec = parse_smt2_string(spec_smt2, decls=dict(self.VarTable))
+                spec = And(spec)
+                self.solver.add(spec)
+                res = self.solver.check()
+                self.solver.pop()
+
+                if res == unsat:
+                    return []
+
             for constraint in Constraints:
                 spec_smt2_originConstrains.append('(assert %s)'
                                                   % (toString(constraint[1:])))
 
             for ce in self.counterexample:
-                counterexampleConstrains = []
-                Args = []
-                index = 0
-                for var in VarTable:
-                    Args.append(str(ce[index]))
-                    # counterexampleConstrains.append('(assert (= %s %s))'
-                    #                                 % (var, str(ce[index])))
-                    index += 1
-                counterexampleConstrains.append('(assert (= ret (%s %s)))'
-                                                % (self.synFunction.name, ' '.join(Args)))
-                counterexampleConstrains.append('(assert (= %s %s))'
-                                                % ('ret', str(ce[-1])))
                 ret_str = ['(declare-const ret Int)']
 
                 self.solver.push()
-                spec_smt2 = spec_smt2_head + ret_str + counterexampleConstrains
+                spec_smt2 = spec_smt2_head + ret_str + ce
                 spec_smt2 = '\n'.join(spec_smt2)
                 spec = parse_smt2_string(spec_smt2)
                 spec = And(spec)
@@ -188,15 +257,14 @@ def ReadQuery(bmExpr):
                 self.solver.pop()
 
                 if res == sat:
-                    # print(funcDefStr)
-                    # print(counterexampleConstrains)
-                    # print("CEGIS success\n\n")
+                    #   print("CEGIS success")
+                    #   print(ce)
+                    #   print(funcDefStr)
                     return []
 
             self.solver.push()
             spec_smt2 = spec_smt2_head + spec_smt2_originConstrains
             spec_smt2 = '\n'.join(spec_smt2)
-            # print(spec_smt2+'\n')
             spec = parse_smt2_string(spec_smt2, decls=dict(self.VarTable))
             if verbose == 2:
                 print("spec:", spec_smt2)
@@ -217,4 +285,4 @@ def ReadQuery(bmExpr):
                 return model
 
     checker = Checker(VarTable, synFunction, Constraints, AuxFuns)
-    return checker
+    return checker, hint_clc

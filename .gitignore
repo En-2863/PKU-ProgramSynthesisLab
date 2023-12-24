@@ -6,4 +6,4 @@
 *.smt
 result.txt
 *.txt
-CEGIS/
+CEGIS*/

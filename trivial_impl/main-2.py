@@ -143,10 +143,10 @@ def ParrallelSearch(bmExpr, FuncDefine, Type, Productions, StartSym='My-Start-Sy
     ParrallelExtendPartial = partial(ParrallelExtend, bmExpr,
                                      FuncDefine, Type, Productions)
     TE_memory = set()                              # set of searched expression
-    BfsQueue = Priority_Queue()                    # search queue
+    BfsQueue = Priority_Queue(Productions.keys())  # search queue
     Ans = None                                     # answer of the program
     BfsQueue.add_item([StartSym])
-    num_processes = 8
+    num_processes = 128
     create_time, select_time = 0, 0
     process_time, update_time = 0, 0
     extend_time, check_time = 0, 0
@@ -212,7 +212,7 @@ def ProgramSynthesis(benchmarkFile):
     # Parsing file to expression list
     bm = StripComments(benchmarkFile)
     bmExpr = sexp.sexp.parseString(bm, parseAll=True).asList()[0]
-    checker = translator.ReadQuery(bmExpr)
+    # checker = translator.ReadQuery(bmExpr)
     SynFunExpr = []
 
     for expr in bmExpr:
@@ -222,7 +222,7 @@ def ProgramSynthesis(benchmarkFile):
 
     StartSym = 'My-Start-Symbol'                   # start symbol
     FuncDefine = ['define-fun'] + SynFunExpr[1:4]  # copy function signature
-    Type, Productions = ParseSynFunc(SynFunExpr, StartSym)
+    Type, Productions, _ = ParseSynFunc(SynFunExpr, StartSym)
     # print(Productions)
 
     StartSearch = time.time()
