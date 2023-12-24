@@ -41,16 +41,8 @@ def feature_transform(feature, params):
     return feature
 
 
-def context_transform(context, params):
-    for i in range(len(context)):
-        context[i] = feature_transform(context[i], params)
-
-    return context
-
-
-def get_transformed_context(statements, seq):
-    pass
-
+def get_transformed_context(statements, seq, params):
+    return tuple(map(lambda x: feature_transform(x, params), get_context(statements, seq)))
 
 
 COMPENSATION_RATE = 0.01
@@ -138,7 +130,5 @@ def get_production_prob(params, productions, statistics, start_symbol):
                 prob_in_context.append((production, (production_appears + compensation) / total_appears))
 
             production_with_prob[non_terminal][context] = prob_in_context
-
-    logging.info(production_with_prob['Start'])
 
     return production_with_prob
