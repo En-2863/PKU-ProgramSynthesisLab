@@ -23,11 +23,13 @@ if __name__ == '__main__':
     func_bodies = [func[-1] for func in td_defines]
 
     params = set([param[0] for param in td_params])
-    non_terminals = set([non_terminal[0] for non_terminal in td_grammar])
+    non_terminals = set([rule[0] for rule in td_grammar])
 
     logging.info(f'params: \n    {td_params}')
     logging.info(f'names: \n    {params}')
     logging.info(f'non-terminals: \n    {non_terminals}')
+
+    logging.info(f'synth-fun: \n    {td_syntheses[0]}')
 
     count = {}
 
@@ -57,7 +59,7 @@ if __name__ == '__main__':
                     logging.info(f'dfs:    transformed: {transformed_context}')
                     """
 
-                    if (feature, context[0], context[1]) in count.keys():
+                    if (feature, context[0], context[1]) in count:
                         count[(feature, context[0], context[1])] += 1
                     else:
                         count[(feature, context[0], context[1])] = 1
@@ -66,5 +68,19 @@ if __name__ == '__main__':
         # logging.info(f'func_body:{func_body}')
         dfs(func_body, [])
 
+    logging.info('COUNT:')
+    contexts = {}
+
     for elem in count:
-        logging.info(f'{elem}: {count[elem]}')
+        count_num = count[elem]
+        logging.info(f'{elem}: {count_num}')
+        if elem[1:] in contexts:
+            contexts[elem[1:]] += count_num
+        else:
+            contexts[elem[1:]] = count_num
+
+    logging.info('CONTEXTS:')
+
+    for elem in contexts:
+        logging.info(f'{elem}: {contexts[elem]}')
+

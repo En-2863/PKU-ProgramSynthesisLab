@@ -1,5 +1,6 @@
-import copy
+import logging
 
+logging.basicConfig(filemode='w', filename='porb.log', level='INFO')
 
 def get_seq(statements, seq):
     statement_now = statements
@@ -46,3 +47,11 @@ def context_transform(context, params, non_terminals):
         context[i] = feature_transform(context[i], params, non_terminals)
 
     return context
+
+
+def get_production_prob(params, productions):
+
+    logging.info(f'params: \n    {params}')
+    logging.info(f'non-terminals: \n    {productions.keys()}')
+
+    for non_terminal in productions:

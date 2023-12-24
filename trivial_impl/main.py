@@ -5,7 +5,7 @@ from util.parsing import ParseSynFunc, StripComments
 from util.priority_queue import Priority_Queue, Select
 from util.counterexample import UpdateSearchSpace
 from util.filter import Filter
-
+from util.prob import *
 
 def Extend(Stmts, Productions):
     """
@@ -116,6 +116,8 @@ def ProgramSynthesis(benchmarkFile):
     StartSym = 'My-Start-Symbol'                   # start symbol
     FuncDefine = ['define-fun'] + SynFunExpr[1:4]  # copy function signature
     Type, Productions = ParseSynFunc(SynFunExpr, StartSym)
+
+    get_production_prob(set([param[0] for param in SynFunExpr[2]]), Productions)
 
     StartSearch=time.time()
     Ans = Search(checker, FuncDefine, Type, Productions, StartSym)
