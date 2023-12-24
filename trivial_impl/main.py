@@ -7,6 +7,8 @@ from util.counterexample import UpdateSearchSpace
 from util.filter import Filter
 from util.prob import *
 
+from train import train
+
 def Extend(Stmts, Productions):
     """
     Given a statement and replace the non-terminals
@@ -117,7 +119,11 @@ def ProgramSynthesis(benchmarkFile):
     FuncDefine = ['define-fun'] + SynFunExpr[1:4]  # copy function signature
     Type, Productions = ParseSynFunc(SynFunExpr, StartSym)
 
-    get_production_prob(set([param[0] for param in SynFunExpr[2]]), Productions)
+
+    if len(sys.argv) > 2:
+        trainData = open(sys.argv[2])
+        statistics = train(trainData)
+        get_production_prob(set([param[0] for param in SynFunExpr[2]]), Productions, statistics)
 
     StartSearch=time.time()
     Ans = Search(checker, FuncDefine, Type, Productions, StartSym)
