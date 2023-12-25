@@ -43,27 +43,36 @@ def Extend(Stmts, Productions, Types):
     return ret
 
 
-def extend_with_prob(statements_now, dis_now, statements_top, seq, productions_with_prob, params):
-
+def extend_with_prob(statements_now, statements_top, dis_top, seq, productions_with_prob, params):
     assert get_seq(statements_top, seq) == statements_now
 
     ret = []
     for i in range(len(statements_now)):
         # Recursively search the non-terminals, e.g. [* Start Start]
         if type(statements_now[i]) is list:
-            TryExtend =
+            seq.append(i)
+            TryExtend = extend_with_prob(statements_now[i], statements_top, dis_top, seq, productions_with_prob, params)
+            seq.pop(-1)
+
             if len(TryExtend) > 0:
-                ret.extend(statements_now[0:i] + [extended] + statements_now[i + 1:]
-                           for extended in TryExtend
+                ret.extend((statements_now[0:i] + [extended] + statements_now[i + 1:], dis)
+                           for (extended, dis) in TryExtend
                            if global_filter(statements_now[0:i] + [extended] + statements_now[i + 1:]))
         elif type(statements_now[i]) is tuple:
             continue
         elif statements_now[i] in productions_with_prob:
-            context = get_transformed_context(statements_top, seq)
-            ret.extend(Stmts[0:i] + [extended] + Stmts[i + 1:]
-                       for extended in Productions[Stmts[i]]
-                       if global_filter(Stmts[0:i] + [extended] + Stmts[i + 1:]))
+            context = get_transformed_context(statements_top, seq, params)
+            ret.extend((statements_now[0:i] + [extended] + statements_now[i + 1:], dis_top + prob_to_dis(prob))
+                       for (extended, prob) in productions_with_prob[statements_now[i]][context]
+                       if global_filter(statements_now[0:i] + [extended] + statements_now[i + 1:]))
     return ret
+
+
+def extend_with_heuristic(statements, dis, productions_with_prob, params, prob_upperbounds):
+    try_extend = extend_with_prob(statements, statements, dis, [], productions_with_prob, params)
+    for i in range(len(try_extend)):
+        try_extend[1] += get_statements_heuristics(try_extend[0], prob_upperbounds)
+    return try_extend
 
 
 def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
@@ -168,13 +177,13 @@ def ProgramSynthesis(benchmarkFile):
 
     productions_with_prob = None
     prob_upperbounds = None
-    params =
+    params = set([param[0] for param in SynFunExpr[2]])
 
     if len(sys.argv) > 2:
         train_data = open(sys.argv[2])
         statistics = train(train_data)
         productions_with_prob, prob_upperbounds = (
-            get_production_prob(set([param[0] for param in SynFunExpr[2]]), Productions, statistics, 'Start'))
+            get_production_prob(params, Productions, statistics, 'Start'))
 
     # StartSearch = time.time()
     # if isIte is False:
