@@ -1,23 +1,23 @@
-def commutative_and_ternary(expression) -> bool:
+def commutative_and_ternary(statements) -> bool:
     """
     Given a statement check if it satisfies:
     1. If the operator is commutative, size of left operand <= right operand
     2. If the operator is ternary, expression in true condition doesn't equal to expression in false condition
 
     Args:
-        Stmts (List(Symbol)):
+        statements (List(Symbol)):
             A list representing a statement, e.g. [[* Start Start]]
 
     Returns:
         True if the expression and its sub-expression satisfy all the rules above, else otherwise
     """
 
-    def commutative_dfs(now_expr) -> (bool, int):
+    def dfs(now_statement) -> (bool, int):
         results = []
         sizes = []
-        for elem in now_expr:
+        for elem in now_statement:
             if type(elem) is list:
-                (res, size) = commutative_dfs(elem)
+                (res, size) = dfs(elem)
             elif type(elem) is str:
                 (res, size) = (True, 0)
             else:
@@ -25,17 +25,17 @@ def commutative_and_ternary(expression) -> bool:
             results.append(res)
             sizes.append(size)
 
-        if now_expr[0] in ['+', '*', 'bvand', 'bvor', 'bvxor', 'bvadd', 'and', 'or']:
-            assert len(now_expr) >= 3
+        if now_statement[0] in ['+', '*', 'bvand', 'bvor', 'bvxor', 'bvadd', 'and', 'or']:
+            assert len(now_statement) >= 3
             return all(results) and sizes[1] <= sizes[2], sum(sizes)
 
-        if expression[0] in ['if0', 'ite']:
-            if type(expression[2]) is tuple and type(expression[3]) is tuple:
-                return all(results) and expression[2] != expression[3], sum(sizes)
+        if now_statement[0] in ['if0', 'ite']:
+            if type(now_statement[2]) is tuple and type(now_statement[3]) is tuple:
+                return all(results) and now_statement[2] != now_statement[3], sum(sizes)
 
         return all(results), sum(sizes)
 
-    return commutative_dfs(expression)[0]
+    return dfs(statements)[0]
 
 
 class ExprFilter:
