@@ -4,8 +4,9 @@ import util.translator as translator
 from util.parsing import ParseSynFunc, StripComments
 from util.priority_queue import Priority_Queue, Select
 from util.filter import global_filter
-from mysolver import hasIte, getSynFunExpr, Solver
-from util.hint import Hint
+from util.prob import *
+from train import train
+import random
 
 
 def Extend(Stmts, Productions, Types):
@@ -61,7 +62,7 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
         Expression: Answer to the benchmark.
     """
     Ans = None                                     # answer of the program
-    TE_memory = set()                              # set of searched expression
+    #TE_memory = set()                              # set of searched expression
     BfsQueue = Priority_Queue(Productions.keys())  # search queue
     FuncDefineStr = translator.toString(FuncDefine, ForceBracket=True)
 
@@ -76,7 +77,8 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
         loop_count += 1
 
         start_select_time = time.time()
-        Curr = Select(BfsQueue)
+        Curr = Select(BfsQueue)[0]
+        Curr, length = Curr[0], Curr[1]
         end_select_time = time.time()
         select_time += end_select_time - start_select_time
 
@@ -111,10 +113,7 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
 
         start_update_time = time.time()
         for TE in TryExtend:
-            TE_str = str(TE)
-            if TE_str not in TE_memory:
-                BfsQueue.add_item(TE)
-                TE_memory.add(TE_str)
+            BfsQueue.add_item(TE, random.randint(0, 10000))
         end_update_time = time.time()
         update_time += end_update_time - start_update_time
 
@@ -141,10 +140,15 @@ def ProgramSynthesis(benchmarkFile):
     FuncDefine = ['define-fun'] + SynFunExpr[1:4]  # copy function signature
     Type, Productions, isIte = ParseSynFunc(SynFunExpr, StartSym)
 
-    # StartSearch = time.time()
-    #if isIte is False:
+
+    if len(sys.argv) > 2:
+        trainData = open(sys.argv[2])
+        statistics = train(trainData)
+        get_production_prob(set([param[0] for param in SynFunExpr[2]]), Productions, statistics, 'Start')
+
+    # StartSearch=time.time()
     Ans = Search(checker, FuncDefine, Type, Productions, StartSym)
-    #else:
+    # else:
     #    Ans = Solver(bmExpr)
     # EndSearch = time.time()
     print(Ans)

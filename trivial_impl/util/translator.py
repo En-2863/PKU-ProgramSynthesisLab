@@ -106,6 +106,7 @@ def ReadQuery(bmExpr):
     AuxFuns = []
     FuncCallList = []
     Logic = None
+    CEGIS_count = {}
     for expr in bmExpr:
         if len(expr) == 0:
             continue
@@ -155,21 +156,23 @@ def ReadQuery(bmExpr):
         def __init__(self, VarTable, synFunction, Constraints, AuxFuns):
             self.VarTable = VarTable
             self.synFunction = synFunction
-            self.Constraints = Constraints
+            self.Constraints = []
             self.AuxFuns = AuxFuns
+            self.SmtConstraints = []
+            self.CounterExample = []
             self.solver = Solver()
-            self.origincounter = []
-            self.counterexample = []
             self.funcname = synFunction.name
             self.argnum = len(synFunction.argList)
 
-            for constraints in self.Constraints:
+            for constraints in Constraints:
+                self.Constraints.append('(assert %s)'
+                                        % (toString(constraints[1:])))
                 if len(constraints) < 2:
                     continue
                 if len(constraints[1]) == 3 and \
                         check_operand(constraints[1], self.funcname, self.argnum):
-                    self.origincounter.append('(assert %s)'
-                                              % (toString(constraints[1:])))
+                    self.SmtConstraints.append('(assert %s)'
+                                               % (toString(constraints[1:])))
 
         def addConstraint(self, model):
             values = []
@@ -194,15 +197,11 @@ def ReadQuery(bmExpr):
             if len(values) == 2 and values[0] == 0 and values[1] == 0:
                 return
 
-            Args = []
-            Constraint = []
-            for var, Var in zip(self.VarTable, values):
-                Args.append(str(Var))
-            Constraint.append('(assert (= ret (%s %s)))'
-                              % (self.synFunction.name, ' '.join(Args)))
-            Constraint.append('(assert (= %s %s))'
-                              % ('ret', str(values[-1])))
-            self.counterexample.append(Constraint)
+            Args = [str(var) for var in values]
+            Constraint = f"(assert (= {Args[-1]} ({self.synFunction.name} {' '.join(Args[:-1])})))"
+            #print(Constraint)
+            CEGIS_count[len(self.CounterExample)] = 0
+            self.CounterExample.append(Constraint)
             # print(len(self.counterexample))
             # print(f"counter: {len(self.counterexample)}")
 
@@ -213,9 +212,11 @@ def ReadQuery(bmExpr):
 
         def check(self, funcDefStr):
             spec_smt2_head = self.AuxFuns + [funcDefStr]
-            spec_smt2_originConstrains = []
+            spec_smt2_originConstrains = self.Constraints
 
-            for constraint in self.origincounter:
+            # Check satisfy original constraints with specific format:
+            # funcname (const...) = const
+            for constraint in self.SmtConstraints:
                 # print(constraint)
                 self.solver.push()
                 spec_smt2 = spec_smt2_head + [constraint]
@@ -229,15 +230,10 @@ def ReadQuery(bmExpr):
                 if res == unsat:
                     return []
 
-            for constraint in Constraints:
-                spec_smt2_originConstrains.append('(assert %s)'
-                                                  % (toString(constraint[1:])))
-
-            for ce in self.counterexample:
-                ret_str = ['(declare-const ret Int)']
-
+            # Check satisfy CEGIS constraints
+            for idx, ce in enumerate(self.CounterExample):
                 self.solver.push()
-                spec_smt2 = spec_smt2_head + ret_str + ce
+                spec_smt2 = spec_smt2_head + [ce]
                 spec_smt2 = '\n'.join(spec_smt2)
                 spec = parse_smt2_string(spec_smt2)
                 spec = And(spec)
@@ -246,9 +242,9 @@ def ReadQuery(bmExpr):
                 self.solver.pop()
 
                 if res == sat:
-                    #   print("CEGIS success")
-                    #   print(ce)
-                    #   print(funcDefStr)
+                    CEGIS_count[idx] += 1
+                    if CEGIS_count[idx] % 5000 == 0:
+                        print(f"{ce}: {CEGIS_count[idx]}")
                     return []
 
             self.solver.push()
