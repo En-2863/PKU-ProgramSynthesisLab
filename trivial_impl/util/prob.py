@@ -1,4 +1,5 @@
 from math import log
+import logging
 
 
 def get_seq(statements, seq):
@@ -144,7 +145,7 @@ def get_production_prob(params, productions, statistics, start_symbol):
                         for symbol in production:
                             next_upperbound = next_upperbound * (
                                 prob_upperbounds[symbol] if symbol in non_terminals else 1)
-                    else:
+                    elif type(production) is str:
                         next_upperbound = next_upperbound * (
                             prob_upperbounds[production] if production in non_terminals else 1)
 
@@ -167,7 +168,7 @@ def get_statements_heuristics(statements, prob_upperbounds):
     for statement in statements:
         if type(statement) is list:
             log_prob_sum += get_statements_heuristics(statement, prob_upperbounds)
-        elif statement in prob_upperbounds:
+        elif type(statement) is str and statement in prob_upperbounds:
             log_prob_sum += prob_to_dis(prob_upperbounds[statement])
 
     return log_prob_sum
