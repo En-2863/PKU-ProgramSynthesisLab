@@ -4,6 +4,7 @@ import src.sexp as sexp
 from util.parsing import StripComments
 from util.prob import *
 
+
 def train(training_data):
     # training
     td_expr = sexp.sexp.parseString(StripComments(training_data), parseAll=True).asList()[0]
