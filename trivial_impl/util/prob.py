@@ -1,7 +1,5 @@
-import logging
 from math import log
-
-logging.basicConfig(filemode='w', filename='porb.log', level='INFO')
+import logging
 
 
 def get_seq(statements, seq):
@@ -16,11 +14,11 @@ def get_seq(statements, seq):
 
 
 def get_context(statements, seq):
-    if len(seq) == 0:
+    if len(seq) == 0 or seq[-1] == 0:
         return '{root}', '{empty}'
 
     up = get_seq(statements, seq[:-1])
-    if seq[-1] <= 1:
+    if seq[-1] == 1:
         left = '{empty}'
     else:
         left = get_seq(statements, seq[:-1] + [seq[-1] - 1])
@@ -50,7 +48,6 @@ COMPENSATION_RATE = 0.01
 
 
 def get_production_prob(params, productions, statistics, start_symbol):
-
     non_terminals = productions.keys()
     derivation_symbols = {}
     possible_contexts = {}
@@ -60,9 +57,10 @@ def get_production_prob(params, productions, statistics, start_symbol):
             [feature_transform(production, params) for production in productions[non_terminal]])
         possible_contexts[non_terminal] = []
 
-    root_symbols = productions[start_symbol]
-    for symbol in root_symbols:
-        possible_contexts[symbol].append(('{root}', '{empty}'))
+    possible_contexts[start_symbol].append(('{root}', '{empty}'))
+    # TODO: add inheritance synthesis
+    for non_terminal in productions[start_symbol]:
+        possible_contexts[non_terminal].append(('{root}', '{empty}'))
 
     for non_terminal in non_terminals:
         for production in productions[non_terminal]:
@@ -135,6 +133,7 @@ def get_production_prob(params, productions, statistics, start_symbol):
 
             productions_with_prob[non_terminal][context] = prob_in_context
 
+    # calculate prob upperbounds
     prob_upperbounds = {}
     for non_terminal in non_terminals:
         prob_upperbounds[non_terminal] = 0

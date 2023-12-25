@@ -43,7 +43,7 @@ class Priority_Queue():
 
         elif self.entry_dict[TE_str][0] > priority:
             self.entry_dict[TE_str][0] = priority
-            self.entry_dict[TE_str][3][1] = dis
+            self.entry_dict[TE_str][3] = (stat, dis)
             heapq.heapify(self.queue)
         # if type(x) is list:
         #     priority = list_count(x, 0, self.nonterminal)  # choose list length as priority

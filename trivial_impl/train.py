@@ -1,14 +1,8 @@
-import sys
 from functools import reduce
 
 import src.sexp as sexp
 from util.parsing import StripComments
 from util.prob import *
-
-import logging
-
-logging.basicConfig(filename='train.log', filemode='w', level='INFO')
-
 
 def train(training_data):
     # training

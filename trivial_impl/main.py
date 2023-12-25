@@ -9,19 +9,22 @@ from util.filter import global_filter
 from util.prob import *
 
 import logging
+
 logging.basicConfig(filename='main.log', filemode='w', level='INFO')
 
+
 def extend_with_prob(statements_now, statements_top, dis_top, seq, productions_with_prob, params):
-    assert get_seq(statements_top, seq) == statements_now
 
     ret = []
     for i in range(len(statements_now)):
         # Recursively search the non-terminals, e.g. [* Start Start]
         if type(statements_now[i]) is list:
-            seq.append(i)
-            TryExtend = extend_with_prob(statements_now[i], statements_top, dis_top, seq, productions_with_prob, params)
-            seq.pop(-1)
-
+            TryExtend = extend_with_prob(statements_now[i],
+                                         statements_top,
+                                         dis_top,
+                                         seq + [i],
+                                         productions_with_prob,
+                                         params)
             if len(TryExtend) > 0:
                 ret.extend((statements_now[0:i] + [extended] + statements_now[i + 1:], dis)
                            for (extended, dis) in TryExtend
@@ -29,10 +32,11 @@ def extend_with_prob(statements_now, statements_top, dis_top, seq, productions_w
         elif type(statements_now[i]) is tuple:
             continue
         elif statements_now[i] in productions_with_prob:
-            context = get_transformed_context(statements_top, seq, params)
+            context = get_transformed_context(statements_top, seq + [i], params)
             ret.extend((statements_now[0:i] + [extended] + statements_now[i + 1:], dis_top + prob_to_dis(prob))
                        for (extended, prob) in productions_with_prob[statements_now[i]][context]
                        if global_filter(statements_now[0:i] + [extended] + statements_now[i + 1:]))
+
     return ret
 
 
@@ -40,9 +44,8 @@ def extend(statements, dis, productions_with_prob, params):
     return extend_with_prob(statements, statements, dis, [], productions_with_prob, params)
 
 
-def Search(Checker, FuncDefine, productions_with_prob, prob_upperbounds, params, StartSym='My-Start-Symbol'):
-
-    Ans = None                                       # set of searched expression
+def Search(Checker, FuncDefine, productions_with_prob, prob_upperbounds, params, StartSym):
+    Ans = None  # set of searched expression
     BfsQueue = Priority_Queue(productions_with_prob.keys())  # search queue
     FuncDefineStr = translator.toString(FuncDefine, ForceBracket=True)
 
@@ -57,8 +60,7 @@ def Search(Checker, FuncDefine, productions_with_prob, prob_upperbounds, params,
         loop_count += 1
 
         start_select_time = time.time()
-        Curr = Select(BfsQueue) # ((Statement, dis), cost)
-        Curr, cost = Curr[0], Curr[1]
+        Curr = Select(BfsQueue)  # ((Statement, dis), cost)
         Curr, dis = Curr[0], Curr[1]
         end_select_time = time.time()
         select_time += end_select_time - start_select_time
@@ -70,7 +72,7 @@ def Search(Checker, FuncDefine, productions_with_prob, prob_upperbounds, params,
             print(f"Extend: {extend_time}\nCheck: {check_time}")
             print('\n\n')
         start_extend_time = time.time()
-        TryExtend = extend(Curr[0], dis, productions_with_prob, params)
+        TryExtend = extend(Curr, dis, productions_with_prob, params)
         end_extend_time = time.time()
         extend_time += end_extend_time - start_extend_time
 
@@ -95,7 +97,7 @@ def Search(Checker, FuncDefine, productions_with_prob, prob_upperbounds, params,
         start_update_time = time.time()
         for statement, dis in TryExtend:
             cost = dis + get_statements_heuristics(statement, prob_upperbounds)
-            BfsQueue.add_item(([statement], dis), cost)
+            BfsQueue.add_item((statement, dis), cost)
         end_update_time = time.time()
         update_time += end_update_time - start_update_time
 
@@ -132,7 +134,7 @@ def ProgramSynthesis(benchmarkFile):
         productions_with_prob, prob_upperbounds = (
             get_production_prob(params, Productions, statistics, StartSym))
 
-    Ans = Search(checker, FuncDefine, productions_with_prob, prob_upperbounds, StartSym)
+    Ans = Search(checker, FuncDefine, productions_with_prob, prob_upperbounds, params, StartSym)
 
     print(Ans)
 
