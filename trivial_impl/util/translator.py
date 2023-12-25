@@ -1,5 +1,6 @@
 from z3 import *
 from .hint import Hint
+import copy
 
 # set it nonzero to debug
 verbose = 0
@@ -128,16 +129,16 @@ def ReadQuery(bmExpr):
     # Declare Var
 
     Table = {}
-    ReverseTabel = {}
+    ReverseTable = {}
     for v, var in zip(FuncCallList[1:], VarDecMap):
         Table[var] = v
-        ReverseTabel[v] = var
+        ReverseTable[v] = var
 
     for var in VarDecMap:
-        VarTable[Table[var]] = DeclareVar(VarDecMap[var][2], var)
+        VarTable[var] = DeclareVar(VarDecMap[var][2], var)
 
-    hinted_constraints = Constraints.copy()
-    hint_clc = Hint(Table)
+    hinted_constraints = copy.deepcopy(Constraints)
+    hint_clc = Hint(Table, ReverseTable)
     hint_clc.build_parent_list(hinted_constraints)
     hint_clc.build_hint_from_constraints(hinted_constraints, FuncCallList)
 

@@ -57,10 +57,11 @@ def contain_func(expr, func_name):
 
 
 class Hint:
-    def __init__(self, Table):
+    def __init__(self, Table, ReverseTable):
         self.parent_list = []
         self.func_list = []
         self.Table = Table
+        self.ReverseTable = ReverseTable
         # # print(Table)
 
         self.hint_list = []
@@ -108,6 +109,17 @@ class Hint:
             # # print(constraint)
             if isinstance(constraint, list):
                 self.check_i(constraint)
+
+    def convert_stmt(self, stmt):
+        if isinstance(stmt, list) or isinstance(stmt, tuple):
+            for i, e in enumerate(stmt):
+                stmt[i] = self.convert_stmt(e)
+            return stmt
+        else:
+            if stmt in self.ReverseTable.keys():
+                return self.ReverseTable[stmt]
+            else:
+                return stmt
 
     def check_i(self, l):
         target_len = len(self.func_list)

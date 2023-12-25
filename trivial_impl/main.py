@@ -96,6 +96,7 @@ def Search(Checker, FuncDefine, Type, Productions, hint, StartSym='My-Start-Symb
             print('\n\n')
         start_extend_time = time.time()
         TryExtend, TryNow = Extend(Curr, Productions, Type, hint)
+        print(TryNow)
         end_extend_time = time.time()
         extend_time += end_extend_time - start_extend_time
 
