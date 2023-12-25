@@ -1,13 +1,8 @@
-import sys
 from functools import reduce
 
 import src.sexp as sexp
 from util.parsing import StripComments
 from util.prob import *
-
-import logging
-
-logging.basicConfig(filename='train.log', filemode='w', level='INFO')
 
 
 def train(training_data):
@@ -38,7 +33,7 @@ def train(training_data):
 
                     symbol = get_seq(func_body, symbol_seq)
                     feature = feature_transform(symbol, params)
-                    context = get_context(func_body, context_seq)
+                    context = tuple(map(lambda x: feature_transform(x, params), get_context(func_body, context_seq)))
 
                     if (feature, context[0], context[1]) in count:
                         count[(feature, context[0], context[1])] += 1

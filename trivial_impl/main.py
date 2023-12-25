@@ -1,77 +1,75 @@
-import sys, os, time
+import copy
+import sys
+import time
+
 import src.sexp as sexp
 import util.translator as translator
+from train import train
+from util.filter import global_filter
 from util.parsing import ParseSynFunc, StripComments
 from util.priority_queue import Priority_Queue, Select
-from util.filter import global_filter
 from util.prob import *
-from util.cut_branch import Abstract
-from train import train
+import logging
+
+logging.basicConfig(filename='main.log', filemode='w', level='INFO')
 
 
-def Extend(Stmts, Productions, Types, check_branch):
-    """
-    Given a statement and replace the non-terminals
-    according to rules from productions.
-
-    Args:
-        Stmts (List(Symbol)):
-            A list representing a statement, e.g. [[* Start Start]]
-        Productions (Dict(Symbol: List(Symbol) )):
-            Rules from synth-fun.
-
-    Returns:
-        List(Statements): Extended statements from the origin.
-    """
+def extend_with_prob(statements_now, statements_top, dis_top, productions_with_prob, prob_upperbounds, params,
+                     queue_dis, queue):
     ret = []
-    #stmts = [['ite', 'StartBool', 'Start', 'Start']]
-    #print(check_branch(stmts))
+    updated = False
 
-    for i in range(len(Stmts)):
+    for i in range(len(statements_now)):
         # Recursively search the non-terminals, e.g. [* Start Start]
-        if type(Stmts[i]) is list:
-            TryExtend = Extend(Stmts[i], Productions, Types, check_branch)
-            if len(TryExtend) > 0:
-                ret.extend(Stmts[0:i] + [extended] + Stmts[i+1:]
-                           for extended in TryExtend
-                           if global_filter(Stmts[0:i] + [extended] + Stmts[i+1:]))
-                           #and check_branch(Stmts[0:i] + [extended] + Stmts[i+1:]))
-        elif type(Stmts[i]) is tuple:
+        if type(statements_now[i]) is list:
+            updated = updated or extend_with_prob(statements_now[i], statements_top, dis_top, productions_with_prob,
+                                                  prob_upperbounds, params, queue_dis, queue)
+
+        elif type(statements_now[i]) is tuple:
             continue
-        elif Stmts[i] in Productions:
-            ret.extend(Stmts[0:i] + [extended] + Stmts[i+1:]
-                       for extended in Productions[Stmts[i]]
-                       if global_filter(Stmts[0:i] + [extended] + Stmts[i+1:]))
-                       #and check_branch(Stmts[0:i] + [extended] + Stmts[i+1:]))
-    return ret
+
+        elif statements_now[i] in productions_with_prob:
+            updated = True
+
+            if i == 0:
+                context = ('{root}', '{empty}')
+            else:
+                context = (feature_transform(statements_now[0], params),
+                           '{empty}' if i == 1 else feature_transform(statements_now[i - 1], params))
+
+            prev = statements_now[i]
+            for extended, prob in productions_with_prob[prev][context]:
+                statements_now[i] = extended
+                next_statement = statements_top
+
+                dis = dis_top + prob_to_dis(prob)
+
+                if global_filter(next_statement):
+                    next_str = str(next_statement)
+                    if next_str not in queue_dis:
+                        queue_dis[next_str] = dis
+                        queue.add_item(copy.deepcopy(next_statement),
+                                       dis + get_statements_heuristics(next_statement, prob_upperbounds))
+                    elif queue_dis[next_str] > dis:
+                        queue_dis[next_str] = dis
+
+                statements_now[i] = prev  # recover
+
+    return updated
 
 
-def Search(Checker, check_branch, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
-    """Search programs that satisfies predefined functions.
-        WARNING: THIS FUNCTION WILL LOOP UNTIL ANSWER IS REACHED.
+def extend(statements, dis, productions_with_prob, prob_upperbounds, params, visit, queue):
+    return extend_with_prob(statements, statements, dis, productions_with_prob, prob_upperbounds, params, visit, queue)
 
-    Args:
-        Checker (Checker):
-            A checker based on z3 solver.
-        FuncDefine (List(Symbols)):
-            A list of symbols defines the function.
-        Type (Dict(Symbol: Type)):
-            Return type of symbols
-        Productions (Dict(Symbol: List(Expressions))):
-            Production rules for given symbols
-        StartSym (str, optional):
-            Defaults to 'My-Start-Symbol'.
 
-    Returns:
-        Expression: Answer to the benchmark.
-    """
-    Ans = None                                     # answer of the program
-    TE_memory = set()                              # set of searched expression
-    BfsQueue = Priority_Queue(Productions.keys())  # search queue
+def Search(Checker, FuncDefine, productions_with_prob, prob_upperbounds, params, StartSym):
+    Ans = None  # set of searched expression
+    BfsQueue = Priority_Queue()  # search queue
     FuncDefineStr = translator.toString(FuncDefine, ForceBracket=True)
 
+    queue_dis = {str([StartSym]): 0}
+
     BfsQueue.add_item([StartSym])
-    update_time = 0
     extend_time, check_time = 0, 0
     select_time = 0
     loop_count = 0
@@ -81,32 +79,26 @@ def Search(Checker, check_branch, FuncDefine, Type, Productions, StartSym='My-St
         loop_count += 1
 
         start_select_time = time.time()
-        Curr = Select(BfsQueue)
+        Curr = Select(BfsQueue)  # ((Statement, dis), cost)
+        curr_str = str(Curr)
+        dis = queue_dis[curr_str]
+
         end_select_time = time.time()
         select_time += end_select_time - start_select_time
 
         if loop_count % 10000 == 0:
             print(f"{loop_count}: {Curr}")
             print(f"Select: {select_time}")
-            print(f"Update: {update_time}")
             print(f"Extend: {extend_time}\nCheck: {check_time}")
             print('\n\n')
         start_extend_time = time.time()
-        TryExtend_Pre = Extend(Curr, Productions, Type, check_branch)
-        TryExtend = []
-        for extend_stmt in TryExtend_Pre:
-            #print(f"check {extend_stmt}:")
-            if check_branch(extend_stmt) is True:
-                TryExtend.append(extend_stmt)
-                #print(f"check ok {extend_stmt}")
-            #print("\n")
-        #print("\n\n")
+        extend_res = extend(Curr, dis, productions_with_prob, prob_upperbounds, params, queue_dis, BfsQueue)
         end_extend_time = time.time()
         extend_time += end_extend_time - start_extend_time
 
         # Nothing to extend, check correctness
         start_check_time = time.time()
-        if len(TryExtend_Pre) == 0:
+        if not extend_res:  # not updated
             # Insert Program just before the last bracket ')'
             CurrStr = translator.toString(Curr)
             Str = FuncDefineStr[:-1] + ' ' + CurrStr + FuncDefineStr[-1]
@@ -119,20 +111,11 @@ def Search(Checker, check_branch, FuncDefine, Type, Productions, StartSym='My-St
                 end_check_time = time.time()
                 check_time += end_check_time - start_check_time
                 break
+
         end_check_time = time.time()
         check_time += end_check_time - start_check_time
 
-        start_update_time = time.time()
-        for TE in TryExtend:
-            TE_str = str(TE)
-            if TE_str not in TE_memory:
-                BfsQueue.add_item(TE)
-                TE_memory.add(TE_str)
-        end_update_time = time.time()
-        update_time += end_update_time - start_update_time
-
     print(f"Select: {select_time}")
-    print(f"Update: {update_time}")
     print(f"Extend: {extend_time}\nCheck: {check_time}")
     return Ans
 
@@ -150,31 +133,30 @@ def ProgramSynthesis(benchmarkFile):
             SynFunExpr = expr
             break
 
-    StartSym = 'My-Start-Symbol'                   # start symbol
+    StartSym = 'My-Start-Symbol'  # start symbol
     FuncDefine = ['define-fun'] + SynFunExpr[1:4]  # copy function signature
     Type, Productions, isIte = ParseSynFunc(SynFunExpr, StartSym)
     check_branch = Abstract(Logic, FuncCallList, SynFunExpr, Productions, Type)
 
+    productions_with_prob = None
+    prob_upperbounds = None
+    params = set([param[0] for param in SynFunExpr[2]])
 
     if len(sys.argv) > 2:
-        trainData = open(sys.argv[2])
-        statistics = train(trainData)
-        get_production_prob(set([param[0] for param in SynFunExpr[2]]), Productions, statistics, 'Start')
+        train_data = open(sys.argv[2])
+        statistics = train(train_data)
+        productions_with_prob, prob_upperbounds = (
+            get_production_prob(params, Productions, statistics, StartSym))
 
-    # StartSearch=time.time()
-    Ans = Search(checker, check_branch, FuncDefine, Type, Productions, StartSym)
-    # else:
-    #    Ans = Solver(bmExpr)
-    # EndSearch = time.time()
+    Ans = Search(checker, FuncDefine, productions_with_prob, prob_upperbounds, params, StartSym)
+
     print(Ans)
 
     with open('result.txt', 'w') as f:
         f.write(Ans)
-        # f.write("\nSynthesis time: %f\nSearch time: %f"%((EndSearch-StartSynthesis),(EndSearch-StartSearch)))
 
 
 if __name__ == '__main__':
-
     benchmarkFile = open(sys.argv[1])
     ProgramSynthesis(benchmarkFile)
 

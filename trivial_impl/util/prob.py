@@ -1,7 +1,5 @@
-import logging
 from math import log
-
-logging.basicConfig(filemode='w', filename='porb.log', level='INFO')
+import logging
 
 
 def get_seq(statements, seq):
@@ -16,11 +14,11 @@ def get_seq(statements, seq):
 
 
 def get_context(statements, seq):
-    if len(seq) == 0:
+    if len(seq) == 0 or seq[-1] == 0:
         return '{root}', '{empty}'
 
     up = get_seq(statements, seq[:-1])
-    if seq[-1] <= 1:
+    if seq[-1] == 1:
         left = '{empty}'
     else:
         left = get_seq(statements, seq[:-1] + [seq[-1] - 1])
@@ -42,10 +40,6 @@ def feature_transform(feature, params):
     return feature
 
 
-def get_transformed_context(statements, seq, params):
-    return tuple(map(lambda x: feature_transform(x, params), get_context(statements, seq)))
-
-
 COMPENSATION_RATE = 0.01
 
 
@@ -60,6 +54,9 @@ def get_production_prob(params, productions, statistics, start_symbol):
         possible_contexts[non_terminal] = []
 
     possible_contexts[start_symbol].append(('{root}', '{empty}'))
+    # TODO: add inheritance synthesis
+    for non_terminal in productions[start_symbol]:
+        possible_contexts[non_terminal].append(('{root}', '{empty}'))
 
     for non_terminal in non_terminals:
         for production in productions[non_terminal]:
@@ -88,10 +85,10 @@ def get_production_prob(params, productions, statistics, start_symbol):
                 else:
                     statistics_shared_count[key] += 1
 
-    production_with_prob = {}
+    productions_with_prob = {}
     for non_terminal in non_terminals:
 
-        production_with_prob[non_terminal] = {}
+        productions_with_prob[non_terminal] = {}
         for context in possible_contexts[non_terminal]:
 
             total_appears = 0
@@ -130,8 +127,9 @@ def get_production_prob(params, productions, statistics, start_symbol):
                 production_appears = appears[i]
                 prob_in_context.append((production, (production_appears + compensation) / total_appears))
 
-            production_with_prob[non_terminal][context] = prob_in_context
+            productions_with_prob[non_terminal][context] = prob_in_context
 
+    # calculate prob upperbounds
     prob_upperbounds = {}
     for non_terminal in non_terminals:
         prob_upperbounds[non_terminal] = 0
@@ -141,13 +139,13 @@ def get_production_prob(params, productions, statistics, start_symbol):
 
         for non_terminal in non_terminals:
             for context in possible_contexts[non_terminal]:
-                for production, probability in production_with_prob[non_terminal][context]:
+                for production, probability in productions_with_prob[non_terminal][context]:
                     next_upperbound = probability
                     if type(production) is list:
                         for symbol in production:
                             next_upperbound = next_upperbound * (
                                 prob_upperbounds[symbol] if symbol in non_terminals else 1)
-                    else:
+                    elif type(production) is str:
                         next_upperbound = next_upperbound * (
                             prob_upperbounds[production] if production in non_terminals else 1)
 
@@ -157,7 +155,11 @@ def get_production_prob(params, productions, statistics, start_symbol):
         if not updated:
             break
 
-    return production_with_prob, prob_upperbounds
+    return productions_with_prob, prob_upperbounds
+
+
+def prob_to_dis(prob):
+    return -log(prob, 2)
 
 
 def get_statements_heuristics(statements, prob_upperbounds):
@@ -166,7 +168,7 @@ def get_statements_heuristics(statements, prob_upperbounds):
     for statement in statements:
         if type(statement) is list:
             log_prob_sum += get_statements_heuristics(statement, prob_upperbounds)
-        elif statement in prob_upperbounds:
-            log_prob_sum += -log(prob_upperbounds[statement], 2)
+        elif type(statement) is str and statement in prob_upperbounds:
+            log_prob_sum += prob_to_dis(prob_upperbounds[statement])
 
     return log_prob_sum
