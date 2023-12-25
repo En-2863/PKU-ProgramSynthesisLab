@@ -1,3 +1,4 @@
+import copy
 import sys
 import time
 
@@ -10,54 +11,65 @@ from util.priority_queue import Priority_Queue, Select
 from util.prob import *
 import logging
 
-
 logging.basicConfig(filename='main.log', filemode='w', level='INFO')
 
 
-def extend_with_prob(statements_now, statements_top, dis_top, productions_with_prob, params):
+def extend_with_prob(statements_now, statements_top, dis_top, productions_with_prob, prob_upperbounds, params,
+                     queue_dis, queue):
     ret = []
+    updated = False
+
     for i in range(len(statements_now)):
         # Recursively search the non-terminals, e.g. [* Start Start]
         if type(statements_now[i]) is list:
-            TryExtend = extend_with_prob(statements_now[i],
-                                         statements_top,
-                                         dis_top,
-                                         productions_with_prob,
-                                         params)
-
-            for extended, dis in TryExtend:
-                next_statement = statements_now[0:i] + [extended] + statements_now[i + 1:]
-                if global_filter(next_statement):
-                    ret.append((next_statement, dis))
+            updated = updated or extend_with_prob(statements_now[i], statements_top, dis_top, productions_with_prob,
+                                                  prob_upperbounds, params, queue_dis, queue)
 
         elif type(statements_now[i]) is tuple:
             continue
 
         elif statements_now[i] in productions_with_prob:
+            updated = True
+
             if i == 0:
                 context = ('{root}', '{empty}')
             else:
                 context = (feature_transform(statements_now[0], params),
                            '{empty}' if i == 1 else feature_transform(statements_now[i - 1], params))
-            for extended, prob in productions_with_prob[statements_now[i]][context]:
-                next_statement = statements_now[0:i] + [extended] + statements_now[i + 1:]
+
+            prev = statements_now[i]
+            for extended, prob in productions_with_prob[prev][context]:
+                statements_now[i] = extended
+                next_statement = statements_top
+
+                dis = dis_top + prob_to_dis(prob)
+
                 if global_filter(next_statement):
-                    ret.append((next_statement, dis_top + prob_to_dis(prob)))
+                    next_str = str(next_statement)
+                    if next_str not in queue_dis:
+                        queue_dis[next_str] = dis
+                        queue.add_item(copy.deepcopy(next_statement),
+                                       dis + get_statements_heuristics(next_statement, prob_upperbounds))
+                    elif queue_dis[next_str] > dis:
+                        queue_dis[next_str] = dis
 
-    return ret
+                statements_now[i] = prev  # recover
+
+    return updated
 
 
-def extend(statements, dis, productions_with_prob, params):
-    return extend_with_prob(statements, statements, dis, productions_with_prob, params)
+def extend(statements, dis, productions_with_prob, prob_upperbounds, params, visit, queue):
+    return extend_with_prob(statements, statements, dis, productions_with_prob, prob_upperbounds, params, visit, queue)
 
 
 def Search(Checker, FuncDefine, productions_with_prob, prob_upperbounds, params, StartSym):
     Ans = None  # set of searched expression
-    BfsQueue = Priority_Queue(productions_with_prob.keys())  # search queue
+    BfsQueue = Priority_Queue()  # search queue
     FuncDefineStr = translator.toString(FuncDefine, ForceBracket=True)
 
-    BfsQueue.add_item(([StartSym], 0))
-    update_time = 0
+    queue_dis = {str([StartSym]): 0}
+
+    BfsQueue.add_item([StartSym])
     extend_time, check_time = 0, 0
     select_time = 0
     loop_count = 0
@@ -68,9 +80,8 @@ def Search(Checker, FuncDefine, productions_with_prob, prob_upperbounds, params,
 
         start_select_time = time.time()
         Curr = Select(BfsQueue)  # ((Statement, dis), cost)
-        Curr, dis = Curr[0], Curr[1]
-
-        logging.info(f'curr cost is {dis + get_statements_heuristics(Curr, prob_upperbounds)}')
+        curr_str = str(Curr)
+        dis = queue_dis[curr_str]
 
         end_select_time = time.time()
         select_time += end_select_time - start_select_time
@@ -78,17 +89,16 @@ def Search(Checker, FuncDefine, productions_with_prob, prob_upperbounds, params,
         if loop_count % 10000 == 0:
             print(f"{loop_count}: {Curr}")
             print(f"Select: {select_time}")
-            print(f"Update: {update_time}")
             print(f"Extend: {extend_time}\nCheck: {check_time}")
             print('\n\n')
         start_extend_time = time.time()
-        TryExtend = extend(Curr, dis, productions_with_prob, params)
+        extend_res = extend(Curr, dis, productions_with_prob, prob_upperbounds, params, queue_dis, BfsQueue)
         end_extend_time = time.time()
         extend_time += end_extend_time - start_extend_time
 
         # Nothing to extend, check correctness
         start_check_time = time.time()
-        if len(TryExtend) == 0:
+        if not extend_res:  # not updated
             # Insert Program just before the last bracket ')'
             CurrStr = translator.toString(Curr)
             Str = FuncDefineStr[:-1] + ' ' + CurrStr + FuncDefineStr[-1]
@@ -101,18 +111,11 @@ def Search(Checker, FuncDefine, productions_with_prob, prob_upperbounds, params,
                 end_check_time = time.time()
                 check_time += end_check_time - start_check_time
                 break
+
         end_check_time = time.time()
         check_time += end_check_time - start_check_time
 
-        start_update_time = time.time()
-        for statement, dis in TryExtend:
-            cost = dis + get_statements_heuristics(statement, prob_upperbounds)
-            BfsQueue.add_item((statement, dis), cost)
-        end_update_time = time.time()
-        update_time += end_update_time - start_update_time
-
     print(f"Select: {select_time}")
-    print(f"Update: {update_time}")
     print(f"Extend: {extend_time}\nCheck: {check_time}")
     return Ans
 
