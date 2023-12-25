@@ -27,11 +27,15 @@ def commutative_and_ternary(statements) -> bool:
 
         if now_statement[0] in ['+', '*', 'bvand', 'bvor', 'bvxor', 'bvadd', 'and', 'or']:
             assert len(now_statement) >= 3
-            return all(results) and sizes[1] <= sizes[2], sum(sizes)
+            return all(results) and sizes[1] >= sizes[2], sum(sizes)
 
         if now_statement[0] in ['if0', 'ite']:
             if type(now_statement[2]) is tuple and type(now_statement[3]) is tuple:
                 return all(results) and now_statement[2] != now_statement[3], sum(sizes)
+
+        if now_statement[0] in ['<', '<=', '>', '>=', '=']:
+            if type(now_statement[1]) is tuple and type(now_statement[2]) is tuple:
+                return all(results) and now_statement[1] != now_statement[2], sum(sizes)
 
         return all(results), sum(sizes)
 

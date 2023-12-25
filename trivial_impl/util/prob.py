@@ -39,10 +39,6 @@ def feature_transform(feature, params):
     return feature
 
 
-def get_transformed_context(statements, seq, params):
-    return tuple(map(lambda x: feature_transform(x, params), get_context(statements, seq)))
-
-
 COMPENSATION_RATE = 0.01
 
 

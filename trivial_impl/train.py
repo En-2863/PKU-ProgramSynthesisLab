@@ -32,7 +32,7 @@ def train(training_data):
 
                     symbol = get_seq(func_body, symbol_seq)
                     feature = feature_transform(symbol, params)
-                    context = get_context(func_body, context_seq)
+                    context = tuple(map(lambda x: feature_transform(x, params), get_context(func_body, context_seq)))
 
                     if (feature, context[0], context[1]) in count:
                         count[(feature, context[0], context[1])] += 1
