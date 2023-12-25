@@ -9,39 +9,6 @@ from util.filter import global_filter
 from util.prob import *
 
 
-def Extend(Stmts, Productions, Types):
-    """
-    Given a statement and replace the non-terminals
-    according to rules from productions.
-
-    Args:
-        Stmts (List(Symbol)):
-            A list representing a statement, e.g. [[* Start Start]]
-        Productions (Dict(Symbol: List(Symbol) )):
-            Rules from synth-fun.
-
-    Returns:
-        List(Statements): Extended statements from the origin.
-    """
-    ret = []
-
-    for i in range(len(Stmts)):
-        # Recursively search the non-terminals, e.g. [* Start Start]
-        if type(Stmts[i]) is list:
-            TryExtend = Extend(Stmts[i], Productions, Types)
-            if len(TryExtend) > 0:
-                ret.extend(Stmts[0:i] + [extended] + Stmts[i + 1:]
-                           for extended in TryExtend
-                           if global_filter(Stmts[0:i] + [extended] + Stmts[i + 1:]))
-        elif type(Stmts[i]) is tuple:
-            continue
-        elif Stmts[i] in Productions:
-            ret.extend(Stmts[0:i] + [extended] + Stmts[i + 1:]
-                       for extended in Productions[Stmts[i]]
-                       if global_filter(Stmts[0:i] + [extended] + Stmts[i + 1:]))
-    return ret
-
-
 def extend_with_prob(statements_now, statements_top, dis_top, seq, productions_with_prob, params):
     assert get_seq(statements_top, seq) == statements_now
 
@@ -67,34 +34,14 @@ def extend_with_prob(statements_now, statements_top, dis_top, seq, productions_w
     return ret
 
 
-def extend_with_heuristic(statements, dis, productions_with_prob, params, prob_upperbounds):
-    try_extend = extend_with_prob(statements, statements, dis, [], productions_with_prob, params)
-    for i in range(len(try_extend)):
-        try_extend[1] += get_statements_heuristics(try_extend[0], prob_upperbounds)
-    return try_extend
+def extend(statements, dis, productions_with_prob, params):
+    return extend_with_prob(statements, statements, dis, [], productions_with_prob, params)
 
 
-def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
-    """Search programs that satisfies predefined functions.
-        WARNING: THIS FUNCTION WILL LOOP UNTIL ANSWER IS REACHED.
+def Search(Checker, FuncDefine, Type, productions_with_prob, prob_upperbounds, params, StartSym='My-Start-Symbol'):
 
-    Args:
-        Checker (Checker):
-            A checker based on z3 solver.
-        FuncDefine (List(Symbols)):
-            A list of symbols defines the function.
-        Type (Dict(Symbol: Type)):
-            Return type of symbols
-        Productions (Dict(Symbol: List(Expressions))):
-            Production rules for given symbols
-        StartSym (str, optional):
-            Defaults to 'My-Start-Symbol'.
-
-    Returns:
-        Expression: Answer to the benchmark.
-    """
     Ans = None                                       # set of searched expression
-    BfsQueue = Priority_Queue(Productions.keys())  # search queue
+    BfsQueue = Priority_Queue(productions_with_prob.keys())  # search queue
     FuncDefineStr = translator.toString(FuncDefine, ForceBracket=True)
 
     BfsQueue.add_item([StartSym])
@@ -108,8 +55,9 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
         loop_count += 1
 
         start_select_time = time.time()
-        Curr = Select(BfsQueue)
-        Curr, length = Curr[0], Curr[1]
+        Curr = Select(BfsQueue) # ((Statement, dis), cost)
+        Curr, cost = Curr[0], Curr[1]
+        Curr, dis = Curr[0], Curr[1]
         end_select_time = time.time()
         select_time += end_select_time - start_select_time
 
@@ -120,7 +68,7 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
             print(f"Extend: {extend_time}\nCheck: {check_time}")
             print('\n\n')
         start_extend_time = time.time()
-        TryExtend = Extend(Curr, Productions, Type)
+        TryExtend = extend(Curr, dis, productions_with_prob, params)
         end_extend_time = time.time()
         extend_time += end_extend_time - start_extend_time
 
@@ -181,7 +129,7 @@ def ProgramSynthesis(benchmarkFile):
         productions_with_prob, prob_upperbounds = (
             get_production_prob(params, Productions, statistics, 'Start'))
 
-    Ans = Search(checker, FuncDefine, Type, Productions, StartSym)
+    Ans = Search(checker, FuncDefine, Type, productions_with_prob, prob_upperbounds, StartSym)
 
     print(Ans)
 
