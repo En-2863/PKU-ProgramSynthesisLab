@@ -88,10 +88,10 @@ def get_production_prob(params, productions, statistics, start_symbol):
                 else:
                     statistics_shared_count[key] += 1
 
-    production_with_prob = {}
+    productions_with_prob = {}
     for non_terminal in non_terminals:
 
-        production_with_prob[non_terminal] = {}
+        productions_with_prob[non_terminal] = {}
         for context in possible_contexts[non_terminal]:
 
             total_appears = 0
@@ -130,7 +130,7 @@ def get_production_prob(params, productions, statistics, start_symbol):
                 production_appears = appears[i]
                 prob_in_context.append((production, (production_appears + compensation) / total_appears))
 
-            production_with_prob[non_terminal][context] = prob_in_context
+            productions_with_prob[non_terminal][context] = prob_in_context
 
     prob_upperbounds = {}
     for non_terminal in non_terminals:
@@ -141,7 +141,7 @@ def get_production_prob(params, productions, statistics, start_symbol):
 
         for non_terminal in non_terminals:
             for context in possible_contexts[non_terminal]:
-                for production, probability in production_with_prob[non_terminal][context]:
+                for production, probability in productions_with_prob[non_terminal][context]:
                     next_upperbound = probability
                     if type(production) is list:
                         for symbol in production:
@@ -157,7 +157,11 @@ def get_production_prob(params, productions, statistics, start_symbol):
         if not updated:
             break
 
-    return production_with_prob, prob_upperbounds
+    return productions_with_prob, prob_upperbounds
+
+
+def prob_to_dis(prob):
+    return -log(prob, 2)
 
 
 def get_statements_heuristics(statements, prob_upperbounds):
@@ -167,6 +171,6 @@ def get_statements_heuristics(statements, prob_upperbounds):
         if type(statement) is list:
             log_prob_sum += get_statements_heuristics(statement, prob_upperbounds)
         elif statement in prob_upperbounds:
-            log_prob_sum += -log(prob_upperbounds[statement], 2)
+            log_prob_sum += prob_to_dis(prob_upperbounds[statement])
 
     return log_prob_sum
