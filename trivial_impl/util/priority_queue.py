@@ -26,14 +26,16 @@ class Priority_Queue():
         return len(self.queue)
 
     def add_item(self, x, priority=0):
-        TE_str = str(x)
+        stat = x[0]
+        dis = x[1]
+        TE_str = str(stat)
 
         if TE_str not in self.TE_memory:
-            if type(x) is list:
+            if type(stat) is list:
                 # maintain list length as a priority
-                length_priority = list_count(x, 0, self.nonterminal)
+                length_priority = list_count(stat, 0, self.nonterminal)
             else:
-                length_priority = 1 if x not in self.nonterminal else 100
+                length_priority = 1 if stat not in self.nonterminal else 100
             self.entry_dict[TE_str] = [priority, length_priority, self.index, x]
             heapq.heappush(self.queue, self.entry_dict[TE_str])
             self.index += 1
@@ -41,6 +43,7 @@ class Priority_Queue():
 
         elif self.entry_dict[TE_str][0] > priority:
             self.entry_dict[TE_str][0] = priority
+            self.entry_dict[TE_str][3][1] = dis
             heapq.heapify(self.queue)
         # if type(x) is list:
         #     priority = list_count(x, 0, self.nonterminal)  # choose list length as priority
@@ -54,8 +57,7 @@ class Priority_Queue():
         if len(self.queue) == 0:
             return None
         output = heapq.heappop(self.queue)
-        # print(output)
-        return (output[3], output[0])
+        return output[3]
 
 
 def Select(BfsQueue: Priority_Queue):
