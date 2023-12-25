@@ -5,7 +5,7 @@ from train import train
 from util.parsing import ParseSynFunc, StripComments
 from util.priority_queue import Priority_Queue, Select
 from util.filter import global_filter
-from util.prob import get_production_prob, get_statements_heuristics, get_transformed_context
+from util.prob import *
 from mysolver import hasIte, getSynFunExpr, Solver
 from util.hint import Hint
 
@@ -37,6 +37,29 @@ def Extend(Stmts, Productions, Types):
         elif type(Stmts[i]) is tuple:
             continue
         elif Stmts[i] in Productions:
+            ret.extend(Stmts[0:i] + [extended] + Stmts[i + 1:]
+                       for extended in Productions[Stmts[i]]
+                       if global_filter(Stmts[0:i] + [extended] + Stmts[i + 1:]))
+    return ret
+
+
+def extend_with_prob(statements_now, dis_now, statements_top, seq, productions_with_prob, params):
+
+    assert get_seq(statements_top, seq) == statements_now
+
+    ret = []
+    for i in range(len(statements_now)):
+        # Recursively search the non-terminals, e.g. [* Start Start]
+        if type(statements_now[i]) is list:
+            TryExtend =
+            if len(TryExtend) > 0:
+                ret.extend(statements_now[0:i] + [extended] + statements_now[i + 1:]
+                           for extended in TryExtend
+                           if global_filter(statements_now[0:i] + [extended] + statements_now[i + 1:]))
+        elif type(statements_now[i]) is tuple:
+            continue
+        elif statements_now[i] in productions_with_prob:
+            context = get_transformed_context(statements_top, seq)
             ret.extend(Stmts[0:i] + [extended] + Stmts[i + 1:]
                        for extended in Productions[Stmts[i]]
                        if global_filter(Stmts[0:i] + [extended] + Stmts[i + 1:]))
@@ -145,6 +168,7 @@ def ProgramSynthesis(benchmarkFile):
 
     productions_with_prob = None
     prob_upperbounds = None
+    params =
 
     if len(sys.argv) > 2:
         train_data = open(sys.argv[2])
