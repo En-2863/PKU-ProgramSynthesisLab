@@ -140,15 +140,11 @@ def ProgramSynthesis(benchmarkFile):
     Type, Productions, isIte = ParseSynFunc(SynFunExpr, StartSym)
     check_branch = Abstract(Logic, FuncCallList, SynFunExpr, Productions, Type)
 
-    productions_with_prob = None
-    prob_upperbounds = None
     params = set([param[0] for param in SynFunExpr[2]])
-
-    if len(sys.argv) > 2:
-        train_data = open(sys.argv[2])
-        statistics = train(train_data)
-        productions_with_prob, prob_upperbounds = (
-            get_production_prob(params, Productions, statistics, StartSym))
+    train_data = open('training_data.sl')
+    statistics = train(train_data)
+    productions_with_prob, prob_upperbounds = (
+        get_production_prob(params, Productions, statistics, StartSym))
 
     Ans = Search(checker, check_branch, FuncDefine, productions_with_prob, prob_upperbounds, params, StartSym)
 
