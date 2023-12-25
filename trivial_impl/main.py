@@ -8,21 +8,23 @@ from train import train
 from util.filter import global_filter
 from util.parsing import ParseSynFunc, StripComments
 from util.priority_queue import Priority_Queue, Select
+from util.cut_branch import Abstract
 from util.prob import *
 import logging
 
 logging.basicConfig(filename='main.log', filemode='w', level='INFO')
 
 
-def extend_with_prob(statements_now, statements_top, dis_top, productions_with_prob, prob_upperbounds, params,
+def extend_with_prob(statements_now, statements_top, check_branch, dis_top, productions_with_prob, prob_upperbounds, params,
                      queue_dis, queue):
     ret = []
     updated = False
 
     for i in range(len(statements_now)):
+        #print(statements_now[i])
         # Recursively search the non-terminals, e.g. [* Start Start]
         if type(statements_now[i]) is list:
-            updated = updated or extend_with_prob(statements_now[i], statements_top, dis_top, productions_with_prob,
+            updated = updated or extend_with_prob(statements_now[i], statements_top, check_branch, dis_top, productions_with_prob,
                                                   prob_upperbounds, params, queue_dis, queue)
 
         elif type(statements_now[i]) is tuple:
@@ -44,7 +46,7 @@ def extend_with_prob(statements_now, statements_top, dis_top, productions_with_p
 
                 dis = dis_top + prob_to_dis(prob)
 
-                if global_filter(next_statement):
+                if global_filter(next_statement) and check_branch(next_statement):
                     next_str = str(next_statement)
                     if next_str not in queue_dis:
                         queue_dis[next_str] = dis
@@ -58,11 +60,11 @@ def extend_with_prob(statements_now, statements_top, dis_top, productions_with_p
     return updated
 
 
-def extend(statements, dis, productions_with_prob, prob_upperbounds, params, visit, queue):
-    return extend_with_prob(statements, statements, dis, productions_with_prob, prob_upperbounds, params, visit, queue)
+def extend(statements, check_branch, dis, productions_with_prob, prob_upperbounds, params, visit, queue):
+    return extend_with_prob(statements, statements, check_branch, dis, productions_with_prob, prob_upperbounds, params, visit, queue)
 
 
-def Search(Checker, FuncDefine, productions_with_prob, prob_upperbounds, params, StartSym):
+def Search(Checker, Check_branch, FuncDefine, productions_with_prob, prob_upperbounds, params, StartSym):
     Ans = None  # set of searched expression
     BfsQueue = Priority_Queue()  # search queue
     FuncDefineStr = translator.toString(FuncDefine, ForceBracket=True)
@@ -92,7 +94,7 @@ def Search(Checker, FuncDefine, productions_with_prob, prob_upperbounds, params,
             print(f"Extend: {extend_time}\nCheck: {check_time}")
             print('\n\n')
         start_extend_time = time.time()
-        extend_res = extend(Curr, dis, productions_with_prob, prob_upperbounds, params, queue_dis, BfsQueue)
+        extend_res = extend(Curr, Check_branch, dis, productions_with_prob, prob_upperbounds, params, queue_dis, BfsQueue)
         end_extend_time = time.time()
         extend_time += end_extend_time - start_extend_time
 
@@ -148,7 +150,7 @@ def ProgramSynthesis(benchmarkFile):
         productions_with_prob, prob_upperbounds = (
             get_production_prob(params, Productions, statistics, StartSym))
 
-    Ans = Search(checker, FuncDefine, productions_with_prob, prob_upperbounds, params, StartSym)
+    Ans = Search(checker, check_branch, FuncDefine, productions_with_prob, prob_upperbounds, params, StartSym)
 
     print(Ans)
 
