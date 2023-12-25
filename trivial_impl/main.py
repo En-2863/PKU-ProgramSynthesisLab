@@ -4,11 +4,11 @@ import util.translator as translator
 from util.parsing import ParseSynFunc, StripComments
 from util.priority_queue import Priority_Queue, Select
 from util.filter import global_filter
-# from mysolver import hasIte, getSynFunExpr, Solver
+from mysolver import hasIte, getSynFunExpr, Solver
 from util.hint import Hint
 
 
-def Extend(Stmts, Productions, Types, hint):
+def Extend(Stmts, Productions, Types):
     """
     Given a statement and replace the non-terminals
     according to rules from productions.
@@ -23,32 +23,25 @@ def Extend(Stmts, Productions, Types, hint):
         List(Statements): Extended statements from the origin.
     """
     ret = []
-    ret_now = []
 
     for i in range(len(Stmts)):
         # Recursively search the non-terminals, e.g. [* Start Start]
         if type(Stmts[i]) is list:
-            TryExtend, _ = Extend(Stmts[i], Productions, Types, hint)
+            TryExtend = Extend(Stmts[i], Productions, Types)
             if len(TryExtend) > 0:
                 ret.extend(Stmts[0:i] + [extended] + Stmts[i+1:]
                            for extended in TryExtend
                            if global_filter(Stmts[0:i] + [extended] + Stmts[i+1:]))
         elif type(Stmts[i]) is tuple:
             continue
-        else:
-            if Stmts[i] in Types.keys() and Types[Stmts[i]] == 'Int':
-                new_list = hint.gen_stmt_from_hint()
-                if new_list is not None and len(new_list) > 0:
-                    ret_now.append(Stmts[0:i] + new_list + Stmts[i + 1:])
-            # Unfold the non-terminals
-            if Stmts[i] in Productions:
-                ret.extend(Stmts[0:i] + [extended] + Stmts[i+1:]
-                           for extended in Productions[Stmts[i]]
-                           if global_filter(Stmts[0:i] + [extended] + Stmts[i+1:]))
-    return ret, ret_now
+        elif Stmts[i] in Productions:
+            ret.extend(Stmts[0:i] + [extended] + Stmts[i+1:]
+                       for extended in Productions[Stmts[i]]
+                       if global_filter(Stmts[0:i] + [extended] + Stmts[i+1:]))
+    return ret
 
 
-def Search(Checker, FuncDefine, Type, Productions, hint, StartSym='My-Start-Symbol'):
+def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
     """Search programs that satisfies predefined functions.
         WARNING: THIS FUNCTION WILL LOOP UNTIL ANSWER IS REACHED.
 
@@ -67,16 +60,15 @@ def Search(Checker, FuncDefine, Type, Productions, hint, StartSym='My-Start-Symb
     Returns:
         Expression: Answer to the benchmark.
     """
+    Ans = None                                     # answer of the program
     TE_memory = set()                              # set of searched expression
     BfsQueue = Priority_Queue(Productions.keys())  # search queue
-    Ans = None                                     # answer of the program
     FuncDefineStr = translator.toString(FuncDefine, ForceBracket=True)
 
     BfsQueue.add_item([StartSym])
     update_time = 0
     extend_time, check_time = 0, 0
     select_time = 0
-
     loop_count = 0
 
     # Top-down search
@@ -95,21 +87,9 @@ def Search(Checker, FuncDefine, Type, Productions, hint, StartSym='My-Start-Symb
             print(f"Extend: {extend_time}\nCheck: {check_time}")
             print('\n\n')
         start_extend_time = time.time()
-        TryExtend, TryNow = Extend(Curr, Productions, Type, hint)
-        print(TryNow)
+        TryExtend = Extend(Curr, Productions, Type)
         end_extend_time = time.time()
         extend_time += end_extend_time - start_extend_time
-
-        for check_stmt in TryNow:
-            CurrStr = translator.toString(check_stmt)
-            Str = FuncDefineStr[:-1] + ' ' + CurrStr + FuncDefineStr[-1]
-            counterexample = Checker.check(Str)
-            if counterexample is None:  # No counter-example
-                print(f'find answer in loop {loop_count}')
-                Ans = Str
-                break
-        if Ans is not None:
-            break
 
         # Nothing to extend, check correctness
         start_check_time = time.time()
@@ -145,11 +125,11 @@ def Search(Checker, FuncDefine, Type, Productions, hint, StartSym='My-Start-Symb
 
 
 def ProgramSynthesis(benchmarkFile):
-    StartSynthesis = time.time()
+    # StartSynthesis = time.time()
     # Parsing file to expression list
     bm = StripComments(benchmarkFile)
     bmExpr = sexp.sexp.parseString(bm, parseAll=True).asList()[0]
-    checker, hint = translator.ReadQuery(bmExpr)
+    checker= translator.ReadQuery(bmExpr)
     SynFunExpr = []
 
     for expr in bmExpr:
@@ -161,9 +141,12 @@ def ProgramSynthesis(benchmarkFile):
     FuncDefine = ['define-fun'] + SynFunExpr[1:4]  # copy function signature
     Type, Productions, isIte = ParseSynFunc(SynFunExpr, StartSym)
 
-    StartSearch = time.time()
-    Ans = Search(checker, FuncDefine, Type, Productions, hint, StartSym)
-    EndSearch = time.time()
+    # StartSearch = time.time()
+    #if isIte is False:
+    Ans = Search(checker, FuncDefine, Type, Productions, StartSym)
+    #else:
+    #    Ans = Solver(bmExpr)
+    # EndSearch = time.time()
     print(Ans)
 
     with open('result.txt', 'w') as f:

@@ -6,7 +6,7 @@
 *.smt
 result.txt
 *.txt
-*/user/submission/
 judge/user/submission/
 judge/user/submission-1/
+*/user/submission/
 CEGIS*/

@@ -1,5 +1,4 @@
 from z3 import *
-from .hint import Hint
 import copy
 
 # set it nonzero to debug
@@ -127,20 +126,8 @@ def ReadQuery(bmExpr):
 
     VarTable = {}
     # Declare Var
-
-    Table = {}
-    ReverseTable = {}
-    for v, var in zip(FuncCallList[1:], VarDecMap):
-        Table[var] = v
-        ReverseTable[v] = var
-
     for var in VarDecMap:
         VarTable[var] = DeclareVar(VarDecMap[var][2], var)
-
-    hinted_constraints = copy.deepcopy(Constraints)
-    hint_clc = Hint(Table, ReverseTable)
-    hint_clc.build_parent_list(hinted_constraints)
-    hint_clc.build_hint_from_constraints(hinted_constraints, FuncCallList)
 
     if verbose == 1:
         print(SynFunExpr)
@@ -180,11 +167,11 @@ def ReadQuery(bmExpr):
                 if len(constraints) < 2:
                     continue
                 if len(constraints[1]) == 3 and \
-                    check_operand(constraints[1], self.funcname, self.argnum):
-                        self.origincounter.append('(assert %s)'
-                                            % (toString(constraints[1:])))
+                        check_operand(constraints[1], self.funcname, self.argnum):
+                    self.origincounter.append('(assert %s)'
+                                              % (toString(constraints[1:])))
 
-        def addConstraint(self, model, fundefine):
+        def addConstraint(self, model):
             values = []
             if len(self.VarTable.keys()) == 0:
                 return
@@ -203,18 +190,19 @@ def ReadQuery(bmExpr):
             func = model[funcname]
 
             values.append(model.eval(funcname(values)))
+            # MAGIC CODE
             if len(values) == 2 and values[0] == 0 and values[1] == 0:
                 return
 
             Args = []
-            counterexampleConstrains = []
+            Constraint = []
             for var, Var in zip(self.VarTable, values):
                 Args.append(str(Var))
-            counterexampleConstrains.append('(assert (= ret (%s %s)))'
-                                            % (self.synFunction.name, ' '.join(Args)))
-            counterexampleConstrains.append('(assert (= %s %s))'
-                                            % ('ret', str(values[-1])))
-            self.counterexample.append(counterexampleConstrains)
+            Constraint.append('(assert (= ret (%s %s)))'
+                              % (self.synFunction.name, ' '.join(Args)))
+            Constraint.append('(assert (= %s %s))'
+                              % ('ret', str(values[-1])))
+            self.counterexample.append(Constraint)
             # print(len(self.counterexample))
             # print(f"counter: {len(self.counterexample)}")
 
@@ -281,9 +269,9 @@ def ReadQuery(bmExpr):
             else:
                 model = self.solver.model()
                 # print(model)
-                self.addConstraint(model, funcDefStr)
+                self.addConstraint(model)
                 self.solver.pop()
                 return model
 
     checker = Checker(VarTable, synFunction, Constraints, AuxFuns)
-    return checker, hint_clc
+    return checker
