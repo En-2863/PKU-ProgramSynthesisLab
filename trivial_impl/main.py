@@ -106,7 +106,7 @@ def Search(Checker, check_branch, FuncDefine, Type, Productions, StartSym='My-St
 
         # Nothing to extend, check correctness
         start_check_time = time.time()
-        if len(TryExtend) == 0:
+        if len(TryExtend_Pre) == 0:
             # Insert Program just before the last bracket ')'
             CurrStr = translator.toString(Curr)
             Str = FuncDefineStr[:-1] + ' ' + CurrStr + FuncDefineStr[-1]
