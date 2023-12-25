@@ -8,6 +8,8 @@ from train import train
 from util.filter import global_filter
 from util.prob import *
 
+import logging
+logging.basicConfig(filename='main.log', filemode='w', level='INFO')
 
 def extend_with_prob(statements_now, statements_top, dis_top, seq, productions_with_prob, params):
     assert get_seq(statements_top, seq) == statements_now
@@ -38,13 +40,13 @@ def extend(statements, dis, productions_with_prob, params):
     return extend_with_prob(statements, statements, dis, [], productions_with_prob, params)
 
 
-def Search(Checker, FuncDefine, Type, productions_with_prob, prob_upperbounds, params, StartSym='My-Start-Symbol'):
+def Search(Checker, FuncDefine, productions_with_prob, prob_upperbounds, params, StartSym='My-Start-Symbol'):
 
     Ans = None                                       # set of searched expression
     BfsQueue = Priority_Queue(productions_with_prob.keys())  # search queue
     FuncDefineStr = translator.toString(FuncDefine, ForceBracket=True)
 
-    BfsQueue.add_item([StartSym])
+    BfsQueue.add_item(([StartSym], 0))
     update_time = 0
     extend_time, check_time = 0, 0
     select_time = 0
@@ -68,7 +70,7 @@ def Search(Checker, FuncDefine, Type, productions_with_prob, prob_upperbounds, p
             print(f"Extend: {extend_time}\nCheck: {check_time}")
             print('\n\n')
         start_extend_time = time.time()
-        TryExtend = extend(Curr, dis, productions_with_prob, params)
+        TryExtend = extend(Curr[0], dis, productions_with_prob, params)
         end_extend_time = time.time()
         extend_time += end_extend_time - start_extend_time
 
@@ -91,8 +93,9 @@ def Search(Checker, FuncDefine, Type, productions_with_prob, prob_upperbounds, p
         check_time += end_check_time - start_check_time
 
         start_update_time = time.time()
-        for TE in TryExtend:
-            BfsQueue.add_item(TE, 0)
+        for statement, dis in TryExtend:
+            cost = dis + get_statements_heuristics(statement, prob_upperbounds)
+            BfsQueue.add_item(([statement], dis), cost)
         end_update_time = time.time()
         update_time += end_update_time - start_update_time
 
@@ -127,9 +130,9 @@ def ProgramSynthesis(benchmarkFile):
         train_data = open(sys.argv[2])
         statistics = train(train_data)
         productions_with_prob, prob_upperbounds = (
-            get_production_prob(params, Productions, statistics, 'Start'))
+            get_production_prob(params, Productions, statistics, StartSym))
 
-    Ans = Search(checker, FuncDefine, Type, productions_with_prob, prob_upperbounds, StartSym)
+    Ans = Search(checker, FuncDefine, productions_with_prob, prob_upperbounds, StartSym)
 
     print(Ans)
 

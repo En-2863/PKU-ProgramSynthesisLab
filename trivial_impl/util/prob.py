@@ -50,6 +50,7 @@ COMPENSATION_RATE = 0.01
 
 
 def get_production_prob(params, productions, statistics, start_symbol):
+
     non_terminals = productions.keys()
     derivation_symbols = {}
     possible_contexts = {}
@@ -59,7 +60,9 @@ def get_production_prob(params, productions, statistics, start_symbol):
             [feature_transform(production, params) for production in productions[non_terminal]])
         possible_contexts[non_terminal] = []
 
-    possible_contexts[start_symbol].append(('{root}', '{empty}'))
+    root_symbols = productions[start_symbol]
+    for symbol in root_symbols:
+        possible_contexts[symbol].append(('{root}', '{empty}'))
 
     for non_terminal in non_terminals:
         for production in productions[non_terminal]:
