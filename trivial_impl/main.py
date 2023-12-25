@@ -78,9 +78,9 @@ def Search(Checker, Check_branch, hint, FuncDefine, productions_with_prob, prob_
     loop_count = 0
 
     TryNow = hint.gen_stmt_from_hint()
-    CurrStr = translator.toString(TryNow)
-    Str = FuncDefineStr[:-1] + ' ' + CurrStr + FuncDefineStr[-1]
     try:
+        CurrStr = translator.toString(TryNow)
+        Str = FuncDefineStr[:-1] + ' ' + CurrStr + FuncDefineStr[-1]
         counterexample = Checker.check(Str)
         # No counter-example
         if counterexample is None:
