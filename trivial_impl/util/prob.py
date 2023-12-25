@@ -1,5 +1,4 @@
 from math import log
-import logging
 
 
 def get_seq(statements, seq):

@@ -8,6 +8,7 @@ from util.filter import global_filter
 from util.parsing import ParseSynFunc, StripComments
 from util.priority_queue import Priority_Queue, Select
 from util.prob import *
+import logging
 
 
 logging.basicConfig(filename='main.log', filemode='w', level='INFO')
