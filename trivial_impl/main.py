@@ -3,10 +3,10 @@ import src.sexp as sexp
 import util.translator as translator
 from util.parsing import ParseSynFunc, StripComments
 from util.priority_queue import Priority_Queue, Select
+from train import train
+
 from util.filter import global_filter
 from util.prob import *
-from train import train
-import random
 
 
 def Extend(Stmts, Productions, Types):
@@ -30,16 +30,48 @@ def Extend(Stmts, Productions, Types):
         if type(Stmts[i]) is list:
             TryExtend = Extend(Stmts[i], Productions, Types)
             if len(TryExtend) > 0:
-                ret.extend(Stmts[0:i] + [extended] + Stmts[i+1:]
+                ret.extend(Stmts[0:i] + [extended] + Stmts[i + 1:]
                            for extended in TryExtend
-                           if global_filter(Stmts[0:i] + [extended] + Stmts[i+1:]))
+                           if global_filter(Stmts[0:i] + [extended] + Stmts[i + 1:]))
         elif type(Stmts[i]) is tuple:
             continue
         elif Stmts[i] in Productions:
-            ret.extend(Stmts[0:i] + [extended] + Stmts[i+1:]
+            ret.extend(Stmts[0:i] + [extended] + Stmts[i + 1:]
                        for extended in Productions[Stmts[i]]
-                       if global_filter(Stmts[0:i] + [extended] + Stmts[i+1:]))
+                       if global_filter(Stmts[0:i] + [extended] + Stmts[i + 1:]))
     return ret
+
+
+def extend_with_prob(statements_now, statements_top, dis_top, seq, productions_with_prob, params):
+    assert get_seq(statements_top, seq) == statements_now
+
+    ret = []
+    for i in range(len(statements_now)):
+        # Recursively search the non-terminals, e.g. [* Start Start]
+        if type(statements_now[i]) is list:
+            seq.append(i)
+            TryExtend = extend_with_prob(statements_now[i], statements_top, dis_top, seq, productions_with_prob, params)
+            seq.pop(-1)
+
+            if len(TryExtend) > 0:
+                ret.extend((statements_now[0:i] + [extended] + statements_now[i + 1:], dis)
+                           for (extended, dis) in TryExtend
+                           if global_filter(statements_now[0:i] + [extended] + statements_now[i + 1:]))
+        elif type(statements_now[i]) is tuple:
+            continue
+        elif statements_now[i] in productions_with_prob:
+            context = get_transformed_context(statements_top, seq, params)
+            ret.extend((statements_now[0:i] + [extended] + statements_now[i + 1:], dis_top + prob_to_dis(prob))
+                       for (extended, prob) in productions_with_prob[statements_now[i]][context]
+                       if global_filter(statements_now[0:i] + [extended] + statements_now[i + 1:]))
+    return ret
+
+
+def extend_with_heuristic(statements, dis, productions_with_prob, params, prob_upperbounds):
+    try_extend = extend_with_prob(statements, statements, dis, [], productions_with_prob, params)
+    for i in range(len(try_extend)):
+        try_extend[1] += get_statements_heuristics(try_extend[0], prob_upperbounds)
+    return try_extend
 
 
 def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
@@ -61,8 +93,7 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
     Returns:
         Expression: Answer to the benchmark.
     """
-    Ans = None                                     # answer of the program
-    #TE_memory = set()                              # set of searched expression
+    Ans = None                                       # set of searched expression
     BfsQueue = Priority_Queue(Productions.keys())  # search queue
     FuncDefineStr = translator.toString(FuncDefine, ForceBracket=True)
 
@@ -128,7 +159,7 @@ def ProgramSynthesis(benchmarkFile):
     # Parsing file to expression list
     bm = StripComments(benchmarkFile)
     bmExpr = sexp.sexp.parseString(bm, parseAll=True).asList()[0]
-    checker= translator.ReadQuery(bmExpr)
+    checker = translator.ReadQuery(bmExpr)
     SynFunExpr = []
 
     for expr in bmExpr:
@@ -136,30 +167,29 @@ def ProgramSynthesis(benchmarkFile):
             SynFunExpr = expr
             break
 
-    StartSym = 'My-Start-Symbol'                   # start symbol
+    StartSym = 'My-Start-Symbol'  # start symbol
     FuncDefine = ['define-fun'] + SynFunExpr[1:4]  # copy function signature
     Type, Productions, isIte = ParseSynFunc(SynFunExpr, StartSym)
 
+    productions_with_prob = None
+    prob_upperbounds = None
+    params = set([param[0] for param in SynFunExpr[2]])
 
     if len(sys.argv) > 2:
-        trainData = open(sys.argv[2])
-        statistics = train(trainData)
-        get_production_prob(set([param[0] for param in SynFunExpr[2]]), Productions, statistics, 'Start')
+        train_data = open(sys.argv[2])
+        statistics = train(train_data)
+        productions_with_prob, prob_upperbounds = (
+            get_production_prob(params, Productions, statistics, 'Start'))
 
-    # StartSearch=time.time()
     Ans = Search(checker, FuncDefine, Type, Productions, StartSym)
-    # else:
-    #    Ans = Solver(bmExpr)
-    # EndSearch = time.time()
+
     print(Ans)
 
     with open('result.txt', 'w') as f:
         f.write(Ans)
-        # f.write("\nSynthesis time: %f\nSearch time: %f"%((EndSearch-StartSynthesis),(EndSearch-StartSearch)))
 
 
 if __name__ == '__main__':
-
     benchmarkFile = open(sys.argv[1])
     ProgramSynthesis(benchmarkFile)
 
