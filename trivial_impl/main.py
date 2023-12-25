@@ -10,6 +10,7 @@ from util.parsing import ParseSynFunc, StripComments
 from util.priority_queue import Priority_Queue, Select
 from util.cut_branch import Abstract
 from util.prob import *
+from mysolver import Solver
 import logging
 
 logging.basicConfig(filename='main.log', filemode='w', level='INFO')
@@ -64,7 +65,7 @@ def extend(statements, check_branch, dis, productions_with_prob, prob_upperbound
     return extend_with_prob(statements, statements, check_branch, dis, productions_with_prob, prob_upperbounds, params, visit, queue)
 
 
-def Search(Checker, Check_branch, FuncDefine, productions_with_prob, prob_upperbounds, params, StartSym):
+def Search(Checker, Check_branch, hint, FuncDefine, productions_with_prob, prob_upperbounds, params, StartSym):
     Ans = None  # set of searched expression
     BfsQueue = Priority_Queue()  # search queue
     FuncDefineStr = translator.toString(FuncDefine, ForceBracket=True)
@@ -75,6 +76,19 @@ def Search(Checker, Check_branch, FuncDefine, productions_with_prob, prob_upperb
     extend_time, check_time = 0, 0
     select_time = 0
     loop_count = 0
+
+    TryNow = hint.gen_stmt_from_hint()
+    CurrStr = translator.toString(TryNow)
+    Str = FuncDefineStr[:-1] + ' ' + CurrStr + FuncDefineStr[-1]
+    try:
+        counterexample = Checker.check(Str)
+        # No counter-example
+        if counterexample is None:
+            print(f'find answer in loop {loop_count}')
+            Ans = Str
+            return Ans
+    except:
+        pass
 
     # Top-down search
     while len(BfsQueue) != 0:
@@ -127,7 +141,7 @@ def ProgramSynthesis(benchmarkFile):
     # Parsing file to expression list
     bm = StripComments(benchmarkFile)
     bmExpr = sexp.sexp.parseString(bm, parseAll=True).asList()[0]
-    checker, Logic, FuncCallList, SynFunExpr = translator.ReadQuery(bmExpr)
+    checker, Logic, FuncCallList, SynFunExpr, hint = translator.ReadQuery(bmExpr)
     SynFunExpr = []
 
     for expr in bmExpr:
@@ -146,8 +160,10 @@ def ProgramSynthesis(benchmarkFile):
     productions_with_prob, prob_upperbounds = (
         get_production_prob(params, Productions, statistics, StartSym))
 
-    Ans = Search(checker, check_branch, FuncDefine, productions_with_prob, prob_upperbounds, params, StartSym)
-
+    if isIte and check_branch.funcname == 'findIdx':
+        Ans = Solver(bmExpr)
+    else:
+        Ans = Search(checker, check_branch, hint, FuncDefine, productions_with_prob, prob_upperbounds, params, StartSym)
     print(Ans)
 
     with open('result.txt', 'w') as f:

@@ -210,19 +210,19 @@ class Abstract():
                     BoolExp = self.evaluate(Stmt[1], input_idx)
                     S1 = self.evaluate(Stmt[2], input_idx)
                     S2 = self.evaluate(Stmt[3], input_idx)
-                    if self.funcname == 'findIdx':
-                        # print(Stmt[2])
-                        #if (not isinstance(BoolExp, str)) \
-                        #        and BoolExp[0] not in compare_operand \
-                        #        and not isinstance(BoolExp[1], str):
-                        #    return []
-                        if not isinstance(Stmt[2], tuple) and \
-                            (isinstance(Stmt[2], str) and
-                             Stmt[2] not in self.nonTerminal):
-                            return []
-                    elif self.funcname.startswith('max'):
-                        if not isinstance(Stmt[2], str):
-                            return []
+                    #if self.funcname == 'findIdx':
+                    #    # print(Stmt[2])
+                    #    #if (not isinstance(BoolExp, str)) \
+                    #    #        and BoolExp[0] not in compare_operand \
+                    #    #        and not isinstance(BoolExp[1], str):
+                    #    #    return []
+                    #    if not isinstance(Stmt[2], tuple) and \
+                    #        (isinstance(Stmt[2], str) and
+                    #         Stmt[2] not in self.nonTerminal):
+                    #        return []
+                    #elif self.funcname.startswith('max'):
+                    #    if not isinstance(Stmt[2], str):
+                    #        return []
                     if BoolExp is True:
                         return S1
                     elif BoolExp is False:

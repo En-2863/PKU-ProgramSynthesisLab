@@ -1,4 +1,6 @@
 from z3 import *
+from .hint import Hint
+import copy
 
 # set it nonzero to debug
 verbose = 0
@@ -106,6 +108,8 @@ def ReadQuery(bmExpr):
     FuncCallList = []
     Logic = None
     CEGIS_count = {}
+    Table = {}
+    ReverseTable = {}
     for expr in bmExpr:
         if len(expr) == 0:
             continue
@@ -128,6 +132,15 @@ def ReadQuery(bmExpr):
     # Declare Var
     for var in VarDecMap:
         VarTable[var] = DeclareVar(VarDecMap[var][2], var)
+
+    for var, v in zip(FuncCallList[1:], VarDecMap):
+        Table[var] = v
+        ReverseTable[v] = var
+
+    hinted_constraints = copy.deepcopy(Constraints)
+    hint_clc = Hint(Table, ReverseTable)
+    hint_clc.build_parent_list(hinted_constraints)
+    hint_clc.build_hint_from_constraints(hinted_constraints, FuncCallList)
 
     if verbose == 1:
         print(SynFunExpr)
@@ -269,4 +282,4 @@ def ReadQuery(bmExpr):
                 return model
 
     checker = Checker(VarTable, synFunction, Constraints, AuxFuns)
-    return checker, Logic, FuncCallList, SynFunExpr
+    return checker, Logic, FuncCallList, SynFunExpr, hint_clc

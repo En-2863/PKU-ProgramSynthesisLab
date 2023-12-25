@@ -10,7 +10,7 @@ files=()
 while IFS= read -r -d $'\0' file; do
     relative_path=$(realpath --relative-to=$BASE_DIR "$file")
     files+=("$relative_path")
-done < <(find $BASE_DIR -type f \( -name "*.py" -o -name "*.sh" -o -name "*.txt" \) -print0)
+done < <(find $BASE_DIR -type f \( -name "*.py" -o -name "*.sh" -o -name "*.txt" -o -name "*.sl" \) -print0)
 
 printf 'zipping: %s\n' "${files[@]}"
 
