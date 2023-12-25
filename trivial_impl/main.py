@@ -4,7 +4,7 @@ import time
 
 import src.sexp as sexp
 import util.translator as translator
-from train import train
+from util.train import train
 from util.filter import global_filter
 from util.parsing import ParseSynFunc, StripComments
 from util.priority_queue import Priority_Queue, Select

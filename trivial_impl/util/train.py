@@ -1,9 +1,8 @@
 from functools import reduce
 
-import src.sexp as sexp
-from util.parsing import StripComments
-from util.prob import *
-
+import trivial_impl.src.sexp as sexp
+from trivial_impl.util.parsing import StripComments
+from trivial_impl.util.prob import *
 
 def train(training_data):
     # training
