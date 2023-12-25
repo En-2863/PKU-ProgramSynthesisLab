@@ -29,7 +29,12 @@ class Priority_Queue():
         TE_str = str(x)
 
         if TE_str not in self.TE_memory:
-            self.entry_dict[TE_str] = [priority, self.index, x]
+            if type(x) is list:
+                # maintain list length as a priority
+                length_priority = list_count(x, 0, self.nonterminal)
+            else:
+                length_priority = 1 if x not in self.nonterminal else 100
+            self.entry_dict[TE_str] = [priority, length_priority, self.index, x]
             heapq.heappush(self.queue, self.entry_dict[TE_str])
             self.index += 1
             self.TE_memory.add(TE_str)
@@ -50,7 +55,7 @@ class Priority_Queue():
             return None
         output = heapq.heappop(self.queue)
         # print(output)
-        return (output[2], output[0])
+        return (output[3], output[0])
 
 
 def Select(BfsQueue: Priority_Queue):

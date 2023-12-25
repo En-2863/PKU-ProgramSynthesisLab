@@ -77,7 +77,7 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
         loop_count += 1
 
         start_select_time = time.time()
-        Curr = Select(BfsQueue)[0]
+        Curr = Select(BfsQueue)
         Curr, length = Curr[0], Curr[1]
         end_select_time = time.time()
         select_time += end_select_time - start_select_time
@@ -113,7 +113,7 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
 
         start_update_time = time.time()
         for TE in TryExtend:
-            BfsQueue.add_item(TE, random.randint(0, 10000))
+            BfsQueue.add_item(TE, 0)
         end_update_time = time.time()
         update_time += end_update_time - start_update_time
 
