@@ -1,5 +1,4 @@
 from z3 import *
-import copy
 
 # set it nonzero to debug
 verbose = 0
@@ -270,4 +269,4 @@ def ReadQuery(bmExpr):
                 return model
 
     checker = Checker(VarTable, synFunction, Constraints, AuxFuns)
-    return checker
+    return checker, Logic, FuncCallList, SynFunExpr
