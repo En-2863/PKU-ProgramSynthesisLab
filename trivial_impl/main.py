@@ -6,7 +6,6 @@ from util.priority_queue import Priority_Queue, Select
 from util.filter import global_filter
 from util.prob import *
 from train import train
-import random
 
 
 def Extend(Stmts, Productions, Types):
@@ -62,7 +61,7 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
         Expression: Answer to the benchmark.
     """
     Ans = None                                     # answer of the program
-    #TE_memory = set()                              # set of searched expression
+    TE_memory = set()                              # set of searched expression
     BfsQueue = Priority_Queue(Productions.keys())  # search queue
     FuncDefineStr = translator.toString(FuncDefine, ForceBracket=True)
 
@@ -78,7 +77,6 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
 
         start_select_time = time.time()
         Curr = Select(BfsQueue)
-        Curr, length = Curr[0], Curr[1]
         end_select_time = time.time()
         select_time += end_select_time - start_select_time
 
@@ -113,7 +111,10 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
 
         start_update_time = time.time()
         for TE in TryExtend:
-            BfsQueue.add_item(TE, 0)
+            TE_str = str(TE)
+            if TE_str not in TE_memory:
+                BfsQueue.add_item(TE)
+                TE_memory.add(TE_str)
         end_update_time = time.time()
         update_time += end_update_time - start_update_time
 
