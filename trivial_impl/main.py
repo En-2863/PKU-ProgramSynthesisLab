@@ -1,9 +1,11 @@
 import sys, os, time
 import src.sexp as sexp
 import util.translator as translator
+from train import train
 from util.parsing import ParseSynFunc, StripComments
 from util.priority_queue import Priority_Queue, Select
 from util.filter import global_filter
+from util.prob import get_production_prob, get_statements_heuristics, get_transformed_context
 from mysolver import hasIte, getSynFunExpr, Solver
 from util.hint import Hint
 
@@ -29,15 +31,15 @@ def Extend(Stmts, Productions, Types):
         if type(Stmts[i]) is list:
             TryExtend = Extend(Stmts[i], Productions, Types)
             if len(TryExtend) > 0:
-                ret.extend(Stmts[0:i] + [extended] + Stmts[i+1:]
+                ret.extend(Stmts[0:i] + [extended] + Stmts[i + 1:]
                            for extended in TryExtend
-                           if global_filter(Stmts[0:i] + [extended] + Stmts[i+1:]))
+                           if global_filter(Stmts[0:i] + [extended] + Stmts[i + 1:]))
         elif type(Stmts[i]) is tuple:
             continue
         elif Stmts[i] in Productions:
-            ret.extend(Stmts[0:i] + [extended] + Stmts[i+1:]
+            ret.extend(Stmts[0:i] + [extended] + Stmts[i + 1:]
                        for extended in Productions[Stmts[i]]
-                       if global_filter(Stmts[0:i] + [extended] + Stmts[i+1:]))
+                       if global_filter(Stmts[0:i] + [extended] + Stmts[i + 1:]))
     return ret
 
 
@@ -60,8 +62,8 @@ def Search(Checker, FuncDefine, Type, Productions, StartSym='My-Start-Symbol'):
     Returns:
         Expression: Answer to the benchmark.
     """
-    Ans = None                                     # answer of the program
-    TE_memory = set()                              # set of searched expression
+    Ans = None  # answer of the program
+    TE_memory = set()  # set of searched expression
     BfsQueue = Priority_Queue(Productions.keys())  # search queue
     FuncDefineStr = translator.toString(FuncDefine, ForceBracket=True)
 
@@ -129,7 +131,7 @@ def ProgramSynthesis(benchmarkFile):
     # Parsing file to expression list
     bm = StripComments(benchmarkFile)
     bmExpr = sexp.sexp.parseString(bm, parseAll=True).asList()[0]
-    checker= translator.ReadQuery(bmExpr)
+    checker = translator.ReadQuery(bmExpr)
     SynFunExpr = []
 
     for expr in bmExpr:
@@ -137,14 +139,23 @@ def ProgramSynthesis(benchmarkFile):
             SynFunExpr = expr
             break
 
-    StartSym = 'My-Start-Symbol'                   # start symbol
+    StartSym = 'My-Start-Symbol'  # start symbol
     FuncDefine = ['define-fun'] + SynFunExpr[1:4]  # copy function signature
     Type, Productions, isIte = ParseSynFunc(SynFunExpr, StartSym)
 
+    productions_with_prob = None
+    prob_upperbounds = None
+
+    if len(sys.argv) > 2:
+        train_data = open(sys.argv[2])
+        statistics = train(train_data)
+        productions_with_prob, prob_upperbounds = (
+            get_production_prob(set([param[0] for param in SynFunExpr[2]]), Productions, statistics, 'Start'))
+
     # StartSearch = time.time()
-    #if isIte is False:
+    # if isIte is False:
     Ans = Search(checker, FuncDefine, Type, Productions, StartSym)
-    #else:
+    # else:
     #    Ans = Solver(bmExpr)
     # EndSearch = time.time()
     print(Ans)
@@ -155,7 +166,6 @@ def ProgramSynthesis(benchmarkFile):
 
 
 if __name__ == '__main__':
-
     benchmarkFile = open(sys.argv[1])
     ProgramSynthesis(benchmarkFile)
 
