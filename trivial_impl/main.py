@@ -1,20 +1,19 @@
-import sys, os, time
+import sys
+import time
+
 import src.sexp as sexp
 import util.translator as translator
+from train import train
+from util.filter import global_filter
 from util.parsing import ParseSynFunc, StripComments
 from util.priority_queue import Priority_Queue, Select
-from train import train
-
-from util.filter import global_filter
 from util.prob import *
 
-import logging
 
 logging.basicConfig(filename='main.log', filemode='w', level='INFO')
 
 
-def extend_with_prob(statements_now, statements_top, dis_top, seq, productions_with_prob, params):
-
+def extend_with_prob(statements_now, statements_top, dis_top, productions_with_prob, params):
     ret = []
     for i in range(len(statements_now)):
         # Recursively search the non-terminals, e.g. [* Start Start]
@@ -22,26 +21,33 @@ def extend_with_prob(statements_now, statements_top, dis_top, seq, productions_w
             TryExtend = extend_with_prob(statements_now[i],
                                          statements_top,
                                          dis_top,
-                                         seq + [i],
                                          productions_with_prob,
                                          params)
-            if len(TryExtend) > 0:
-                ret.extend((statements_now[0:i] + [extended] + statements_now[i + 1:], dis)
-                           for (extended, dis) in TryExtend
-                           if global_filter(statements_now[0:i] + [extended] + statements_now[i + 1:]))
+
+            for extended, dis in TryExtend:
+                next_statement = statements_now[0:i] + [extended] + statements_now[i + 1:]
+                if global_filter(next_statement):
+                    ret.append((next_statement, dis))
+
         elif type(statements_now[i]) is tuple:
             continue
+
         elif statements_now[i] in productions_with_prob:
-            context = get_transformed_context(statements_top, seq + [i], params)
-            ret.extend((statements_now[0:i] + [extended] + statements_now[i + 1:], dis_top + prob_to_dis(prob))
-                       for (extended, prob) in productions_with_prob[statements_now[i]][context]
-                       if global_filter(statements_now[0:i] + [extended] + statements_now[i + 1:]))
+            if i == 0:
+                context = ('{root}', '{empty}')
+            else:
+                context = (feature_transform(statements_now[0], params),
+                           '{empty}' if i == 1 else feature_transform(statements_now[i - 1], params))
+            for extended, prob in productions_with_prob[statements_now[i]][context]:
+                next_statement = statements_now[0:i] + [extended] + statements_now[i + 1:]
+                if global_filter(next_statement):
+                    ret.append((next_statement, dis_top + prob_to_dis(prob)))
 
     return ret
 
 
 def extend(statements, dis, productions_with_prob, params):
-    return extend_with_prob(statements, statements, dis, [], productions_with_prob, params)
+    return extend_with_prob(statements, statements, dis, productions_with_prob, params)
 
 
 def Search(Checker, FuncDefine, productions_with_prob, prob_upperbounds, params, StartSym):
@@ -62,6 +68,9 @@ def Search(Checker, FuncDefine, productions_with_prob, prob_upperbounds, params,
         start_select_time = time.time()
         Curr = Select(BfsQueue)  # ((Statement, dis), cost)
         Curr, dis = Curr[0], Curr[1]
+
+        logging.info(f'curr cost is {dis + get_statements_heuristics(Curr, prob_upperbounds)}')
+
         end_select_time = time.time()
         select_time += end_select_time - start_select_time
 
